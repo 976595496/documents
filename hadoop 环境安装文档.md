@@ -225,7 +225,7 @@
 <workflow-app/>
 ```
 
-**注意eg: **oozie默认会对提交的workflow xml配置进行可行性验证, 如果检测出不可运行, 会提示错误, 但是如果你认为这个xml文件没有错误, 可以修改配置关闭可行性校验, 如下
+** 注意eg: **oozie默认会对提交的workflow xml配置进行可行性验证, 如果检测出不可运行, 会提示错误, 但是如果你认为这个xml文件没有错误, 可以修改配置关闭可行性校验, 如下
 
 - 修改工作流的job.properties 配置中的属性   oozie.wf.validate.ForkJoin = false  这个工作流就不会进行校验了
 - 修改 oozie-site.xml  oozie.validate.ForkJoin = false 所有上传的工作流workflow 都不会进行可行性校验了
@@ -259,7 +259,7 @@
 
 
 
-#####Action Node (action 节点)
+##### Action Node (action 节点)
 
 * 由动作节点触发的所有计算/处理任务均由Oozie异步执行
 * oozie 提供两种方式检测 Action Node 执行的情况: 回调和轮训
