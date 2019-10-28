@@ -21,7 +21,216 @@
 
 
 ## oozie
+### 安装准备
 
+- 环境: Linux(CentOS 7)
+
+- hadoop 集群环境   (nameNode 节点)
+
+- jdk8
+
+- 关系型数据库(Mysql)
+
+- 安装包
+
+  - oozie  [oozie-4.0.0-cdh5.3.6.tar.gz](http://archive.cloudera.com/cdh5/cdh/5/oozie-4.0.0-cdh5.3.6.tar.gz)
+  - ext-2.2.zip [ext-2.2.zip](http://archive.cloudera.com/gplextras/misc/ext-2.2.zip)
+  - mysql-connector-java-5.1.45.jar
+
+  下载相应的安装包后
+
+  <img src="./hadoop/oozie/1.png"/>
+
+  
+
+**说明:**oozie这里用的安装包是cloudera oozie-4.0.0-cdh5.3.6.tar.gz 版本, 不需要自己编译, 如果想要使用原生版本的可以使用原生oozie 自己编译安装包 [oozie-4.3.1.tar.gz ](https://mirrors.tuna.tsinghua.edu.cn/apache/oozie/4.3.1/oozie-4.3.1.tar.gz)
+
+
+
+### 安装
+
+1. 解压oozie-4.0.0-cdh5.3.6.tar.gz到安装目录  并修改解压后的文件夹名为cdh
+
+   ```shell
+   tar -zxvf oozie-4.0.0-cdh5.3.6.tar.gz -C /opt/modules/
+   cd /opt/modules
+   mv oozie-4.0.0-cdh5.3.6 oozie-cdh
+   ```
+
+   
+
+2. 在oozie-cdh目录下创建libext文件夹, 然后复制hadoop/share 目录下的.jar复制到libext下
+
+   ```shell
+   cp $HADOOP_HOME/share/hadoop/*/lib/*.jar libext/
+   cp $HADOOP_HOME/share/hadoop/*/*.jar libext/
+   ```
+
+3. 将ext-2.2.zip 和数据库驱动包也复制到libext下
+
+   ```shell
+   cp /opt/modules/oozie/ext-2.2.zip libext/
+   cp /opt/modules/mysql/mysql-connector-java-5.1.45.jar libext/
+   ```
+
+   
+
+4. 修改oozie配置文件   conf/oozie-site.xml   增加配置
+
+   ```shell
+      <property>
+           <name>oozie.service.HadoopAccessorService.hadoop.configurations</name>
+           <value>*=/opt/modules/hadoop/hadoop-2.9.2/etc/hadoop</value>
+           <description>hadoop配置文件的位置</description>
+       </property>
+    
+    
+       <property>
+           <name>oozie.service.JPAService.jdbc.password</name>
+           <value>oozie</value>
+           <description>数据库驱动类</description>
+       </property>
+       <property>
+           <name>oozie.service.JPAService.jdbc.url</name>
+           <value>jdbc:mysql://hadoop201:3306/oozie</value>
+           <description>数据库url</description>
+       </property>
+   
+       <property>
+           <name>oozie.service.JPAService.jdbc.username</name>
+           <value>oozie</value>
+           <description>数据库用户名</description>
+       </property>
+   
+       <property>
+           <name>oozie.service.JPAService.jdbc.password</name>
+           <value>oozie</value>
+           <description>数据库密码</description>
+       </property>
+   ```
+
+   
+
+5. 在hadoop的配置文件中增加oozie的配置 core-site.xml
+
+   ```shell
+     <!--oozie-->
+     <property>
+       <name>hadoop.proxyuser.${userName}.hosts</name>
+       <value>*</value>
+     </property>
+     <property>
+       <name>hadoop.proxyuser.${groupName}.groups</name>
+       <value>*</value>
+     </property>
+   ```
+
+   **${}表示操作hadoop的用户和用户组, 配置时替换成服务器的用户和用户组**
+
+6. 服务器安装zip 和unzip工具
+
+   ```shell
+   #检验工具是否安装
+   rpm -qa zip
+   rpm -qa unzip
+   #如果没有安装过
+   yum install -y zip
+   yum install -y unzip
+   ```
+
+   
+
+7. oozie 打包
+
+   ```shell
+   bin/oozie-setup.sh prepare-war
+   ```
+
+   成功后会提示war包位置
+
+8. 上传sharelib压缩包到hdfs上 
+
+   ```shell
+   bin/oozie-setup.sh sharelib create -fs hdfs://hadoop201:8020 -locallib oozie-sharelib-4.0.0-cdh5.3.6-yarn.tar.gz
+   ```
+
+   **注意: **在oozie-cdh 目录下有两个sharelib包, 上传yarn的包
+
+9. 安装数据库并创建表
+
+   (数据库的安装不在这里表述)   [oozie.sql](./hadoop/oozie/oozie.sql)
+
+   ```
+   #创建用户和数据库
+   mysql -u root -p
+   > CREATE USER 'userName'@'%' IDENTIFIED BY 'password';
+   > grant all privileges on *.* to 'dataBaseName'@'%'identified by 'password' with grant option;
+   > flush privileges;
+   
+   使用脚本创建oozie的初始化表
+   
+   bin/oozie-setup.sh db create -run oozie.sql
+   ```
+
+   
+
+10. 最后启动oozie
+
+    ```shell
+    bin/oozied.sh start
+    ```
+
+    启动成功会提示地址端口号的url
+
+**hadoop和mysql的安装请看其安装文档**
+
+
+
+### workflow xml配置
+
+1. 配置文件属性(attribute)及语法(syntax)
+
+```xml
+<workflow-app name="foo-test" xmlns="uri:oozie:workflow:0.1">
+    <!-- 开始节点 -->
+    <start to="hadoop-first-job"/>
+
+    <!-- 终止节点 -->
+    <kill name="kill-node-name">
+        <message>执行kill节点, 输出的日志信息</message>
+    </kill>
+
+    <!-- 判断路由节点 -->
+    <decision name="decision-name">
+        <switch>
+            <case to="hadoop-second-job">${fs:fileSize(secondjobOutputDir) gt 10 * GB}</case>
+            <case to="hadoop-third-job">${fs:fileSize(secondjobOutputDir) lt 100 * GB}</case>
+            <!-- <case to="hadoop-second-job">${fs:fileSize(secondjobOutputDir) gt 10 * GB}</case> -->
+            <default to"end-name">
+        </switch>
+    </decision>
+
+    <!-- 分支节点 -->
+    <fork name="fork-name">
+        <path start="next-node-name1" />
+        <path start="next-node-name2" />
+    </fork>
+
+    <!-- 合并节点 -->
+    <join name="join-node-name" to="next-node-name3"/>
+
+    <!-- 结束节点 -->
+    <end name="end-name">
+
+<workflow-app/>
+```
+
+**注意eg: **oozie默认会对提交的workflow xml配置进行可行性验证, 如果检测出不可运行, 会提示错误, 但是如果你认为这个xml文件没有错误, 可以修改配置关闭可行性校验, 如下
+
+- 修改工作流的job.properties 配置中的属性   oozie.wf.validate.ForkJoin = false  这个工作流就不会进行校验了
+- 修改 oozie-site.xml  oozie.validate.ForkJoin = false 所有上传的工作流workflow 都不会进行可行性校验了
+
+以上两个配置默认都是true
 
 
 
