@@ -201,12 +201,12 @@ GRANT ALL PRIVILEGES ON *.* TO 'username'@'%' IDENTIFIED BY 'password' WITH GRAN
 
 12.使用navicat在外网访问
 
-![](./mysql/4.png)
+![](mysql/4.png)
 
  
 
 
 
-![](./mysql/5.png)
+![](mysql/5.png)
 
   
