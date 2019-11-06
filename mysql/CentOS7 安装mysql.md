@@ -70,7 +70,7 @@ mysql> set password for 'root'@'localhost'=password('password');
 msyql>  SHOW VARIABLES LIKE 'validate_password%'; 
 ```
 
-<img src="./mysql/1.png" />
+![](./mysql/1.png)
 
 设置允许使用简单密码策略    
 
@@ -173,7 +173,7 @@ GRANT ALL PRIVILEGES ON *.* TO 'username'@'%' IDENTIFIED BY 'password' WITH GRAN
    bin/mysql -u root -p
    ```
 
-   <img src="./mysql/2.png" />
+   ![](./mysql/2.png)
 
 9. 修改root 初始化密码
 
@@ -197,14 +197,16 @@ GRANT ALL PRIVILEGES ON *.* TO 'username'@'%' IDENTIFIED BY 'password' WITH GRAN
     > select user, host from mysql.user;
     ```
 
-    <img src="./mysql/3.png" />
+    ![](./mysql/3.png)
 
 12.使用navicat在外网访问
 
-<img src="./mysql/4.png" /> 
+![](./mysql/4.png)
+
+ 
 
 
 
-<img src="./mysql/5.png" />
+![](./mysql/5.png)
 
   
