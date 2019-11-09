@@ -697,6 +697,28 @@
 
 **hadoop和mysql的安装请看其安装文档**
 
+#### 操作
+
+上传执行任务到 hdfs
+
+```shell
+$ /opt/modules/cdh/hadoop-2.5.0-cdh5.3.6/bin/hdfs dfs -put /opt/modules/cdh/oozie-4.0.0-cdh5.3.6/oozie-apps /user/admin
+```
+
+执行任务
+
+```shell
+$ bin/oozie job -oozie http://hadoop-senior01.itguigu.com:11000/oozie -config oozie-apps/shell/job.properties -run
+```
+
+杀死某个任务
+
+```shell
+$ bin/oozie job -oozie http://hadoop-senior01.itguigu.com:11000/oozie -kill 0000004-170425105153692-oozie-z-W
+```
+
+
+
 
 
 ### workflow xml配置
