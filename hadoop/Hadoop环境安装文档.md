@@ -597,8 +597,8 @@
      
      
         <property>
-            <name>oozie.service.JPAService.jdbc.password</name>
-            <value>oozie</value>
+            <name>oozie.service.JPAService.jdbc.driver</name>
+            <value>com.mysql.jdbc.Driver</value>
             <description>数据库驱动类</description>
         </property>
         <property>
@@ -643,7 +643,17 @@
 
     <img src="./oozie/3.png" />
 
-13. oozie 打包
+13. 生成 oozie.sql初始化数据库脚本
+
+    ```shell
+    $ bin/oozie-setup.sh db create -run -sqlfile oozie.sql
+    ```
+
+    <img src="./oozie/4.png" />
+
+    <img src="./oozie/5.png" />
+
+14. oozie 打包
 
     ```shell
     bin/oozie-setup.sh prepare-war
@@ -655,7 +665,7 @@
 
     **注意: **在oozie-cdh 目录下有两个sharelib包, 上传yarn的包
 
-14. 安装数据库并创建表
+15. 安装数据库并创建表          **上面使用命令初始化数据库生成脚本不用在此初始化数据库**
 
     (数据库的安装不在这里表述)   [oozie.sql](./hadoop/oozie/oozie.sql)
 
@@ -673,13 +683,17 @@
 
     
 
-15. 最后启动oozie
+16. 最后启动oozie
 
     ```shell
     bin/oozied.sh start
     ```
 
     启动成功会提示地址端口号的url
+
+<img src="./oozie/6.png" />
+
+<img src="./oozie/7.png" />
 
 **hadoop和mysql的安装请看其安装文档**
 
