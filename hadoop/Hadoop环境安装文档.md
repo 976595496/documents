@@ -781,3 +781,134 @@ $ bin/oozie job -oozie http://hadoop-senior01.itguigu.com:11000/oozie -kill 0000
 
 
 
+## Hbase 安装配置教程
+
+### 准备
+
+### 安装
+
+1. 解压到指定文件夹
+
+   ```shell
+   $ tar -zxvf hbase-1.2.0-cdh5.9.3.tar.gz -C /opt/modules/
+   $ cd /opt/modules/
+   $ mv hbase-1.2.0-cdh5.9.3/ hbase
+   ```
+
+   
+
+2. 配置hbase-env.sh
+
+   ```shell
+   $ cd /hbase/conf
+   $ vim hbase-env.sh
+   ```
+
+   ```shell
+   export JAVA_HOME=/opt/modules/jdk  #配置_JAVA_HOME
+   export HBASE_MANAGES_ZK=false    #配置默认不使用hbase 自带的 zookeeper服务
+   ```
+
+   
+
+3. 配置 hbase-site.xml
+
+   ```xml
+   <!--配置 hbase 数据根节点-->  
+     <property>
+       <name>hbase.rootdir</name>
+       <value>hdfs://hadoop151:8020/hbase</value>
+       <!--<value>hdfs://nncluster/hbase</value> 如果是高可用配置 hdfs集群 id-->
+     </property>
+   <!--配置 hbase 是否支持分布式--> 
+     <property>
+       <name>hbase.cluster.distributed</name>
+       <value>true</value>
+     </property>
+   <!--配置 hbase master端口号, 如果是单节点需要配置主机地址1.1.1.1:16000, 如果是集群只需要配置端口号-->
+     <property>
+       <name>hbase.master.port</name>
+       <value>16000</value>
+     </property>
+   <!--配置 zookeeper 集群节点--> 
+     <property>
+       <name>hbase.zookeeper.quorum</name>
+       <value>hadoop151:2181,hadoop152:2181,hadoop153:2181</value>
+     </property>
+   <!--配置 zookeeper 属性数据目录--> 
+     <property>
+       <name>hbase.zookeeper.property.dataDir</name>
+       <value>/opt/modules/zk3.4.14/data/</value>
+     </property>
+   ```
+
+   
+
+4. 配置regionservers 
+
+   ```shell
+   hadoop151
+   hadoop152
+   hadoop153
+   ```
+
+   
+
+5. 创建 core-site.xml 和 hdfs 软连接
+
+   ```shell
+   $ ln -s /opt/modules/hadoop/etc/hadoop/core-site.xml /opt/modules/hbase/conf/core-site.xml
+   $ ln -s /opt/modules/hadoop/etc/hadoop/hdfs-site.xml /opt/modules/hbase/conf/hdfs-site.xml
+   ```
+
+   
+
+6. hbase适配 hadoop 运行版本与 zookeeper 运行版本
+
+   ```shell
+   $ cd /opt/modules/hbase/lib
+   $ find -name hadoop*.jar
+   $ find -name zookeeper*.jar
+   ```
+
+   查询出来的jar包列表 到当前运行的 hadoop 和 zookeeper中查询相应 jar 包, 然后 cp -a 到 hbase/lib 中
+
+7. 启动 hbase 集群
+
+   
+
+   ```shell
+   $ cd /opt/modules/hbase
+   $ bin/start-hbase.sh 
+   ```
+
+   或在每台机器上启动各自的进程
+
+   ```shell
+   $ bin/hbase-deamon.sh start master
+   $ bin/hbase-deamon.sh start regionServer
+   ```
+
+   <img src="./hbase/1.png" />
+
+8. 配置 hbase Hmaster高可用
+
+   在 conf 中创建配置文件, 添加配置
+
+   ```shell
+   $ vim backup-masters
+   ```
+
+   ```shell
+   hadoop151
+   hadoop155
+   ```
+
+   重启 hbase 集群
+
+   <img src="./hbase/2.png" />
+
+
+
+**注意**如果启动 hbase 集群后, 其他节点的 HRegionServer 启动消失, 需要同步服务器时间
+

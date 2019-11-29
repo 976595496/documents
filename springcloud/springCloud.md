@@ -600,7 +600,8 @@ $ consul
        public Docket createRestApi() {
            return new Docket(DocumentationType.SWAGGER_2)
                    .apiInfo(apiInfo())
-                   .select()        			    .apis(RequestHandlerSelectors.withMethodAnnotation(ApiOperation.class))
+                   .select()
+             .apis(RequestHandlerSelectors.withMethodAnnotation(ApiOperation.class))
                    .paths(PathSelectors.any())
                    .build();
        }
@@ -616,19 +617,19 @@ $ consul
        }
    }
    
-   ```
-
-   **@ConditionalOnProperty(prefix = "swagger", name = "open", havingValue = "true")注解:**
-
-   配置swagger是否生效, 由于项目会经历 开发, 测试, 生产等多个环境, 但是在生产环境又不会允许有文档相关内容, 所以在此处设置swagger根据不同环境是否生效,在application中配置相应属性, 改变生效
-
+```
+   
+**@ConditionalOnProperty(prefix = "swagger", name = "open", havingValue = "true")注解:**
+   
+配置swagger是否生效, 由于项目会经历 开发, 测试, 生产等多个环境, 但是在生产环境又不会允许有文档相关内容, 所以在此处设置swagger根据不同环境是否生效,在application中配置相应属性, 改变生效
+   
    ```yaml
    swagger:
      open: true
-   ```
-
-   此时swagger已经可以在各个模块显示了, mosulehost:port/swagger-ui.html
-
+```
+   
+此时swagger已经可以在各个模块显示了, mosulehost:port/swagger-ui.html
+   
    <img src="./swagger/1.png">
 
 ### Gateway 聚合swagger文档
@@ -734,10 +735,11 @@ $ consul
        public ResponseEntity<List<SwaggerResource>> swaggerResources() {
            return new ResponseEntity(swaggerResourceProvider.get(), HttpStatus.OK);
        }
-   ```
-
-   现在可以通过gateway查看各个模块的api文档了
-
+   }
+```
+   
+现在可以通过gateway查看各个模块的api文档了
+   
    <img src="./swagger/2.png" />
 
 ### 集成bootstrap-ui 界面
