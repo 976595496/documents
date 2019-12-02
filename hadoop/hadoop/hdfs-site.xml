@@ -1,0 +1,69 @@
+<configuration>
+  <property>
+    <name>dfs.replication</name>
+    <value>3</value>
+  </property>
+
+  <property>
+    <name>dfs.namenode.secondary.http-address</name>
+    <value>hadoop155:50090</value>
+  </property>
+
+  <property>
+    <name>dfs.nameservices</name>
+    <value>nncluster</value>
+  </property>
+
+  <property>
+    <name>dfs.ha.namenodes.nncluster</name>
+    <value>nn1,nn2</value>
+  </property>
+  <property>
+    <name>dfs.namenode.rpc-address.nncluster.nn1</name>
+    <value>hadoop151:8020</value>
+  </property>
+  <property>
+    <name>dfs.namenode.http-address.nncluster.nn1</name>
+    <value>hadoop151:50070</value>
+  </property>
+  <property>
+    <name>dfs.namenode.rpc-address.nncluster.nn2</name>
+    <value>hadoop152:8020</value>
+  </property>
+  <property>
+    <name>dfs.namenode.http-address.nncluster.nn2</name>
+    <value>hadoop152:50070</value>
+  </property>
+  <property>
+    <name>dfs.namenode.shared.edits.dir</name>
+    <value>qjournal://hadoop151:8485;hadoop152:8485;hadoop153:8485;hadoop154:8485;hadoop155:8485/nncluster</value>
+  </property>
+  <property>
+    <name>dfs.journalnode.edits.dir</name>
+    <value>/opt/modules/hadoop/journaldata</value>
+  </property>
+  <property>
+    <name>dfs.ha.automatic-failover.enabled</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>dfs.client.failover.proxy.provider.nncluster</name>
+    <value>org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider</value>
+  </property>
+  <property>
+    <name>dfs.ha.fencing.methods</name>
+    <value>
+        sshfence
+        shell(/bin/true)
+    </value>
+  </property>
+  <property>
+    <name>dfs.ha.fencing.ssh.private-key-files</name>
+    <value>/home/hadoop/.ssh/id_rsa</value>
+  </property>
+  <property>
+    <name>dfs.ha.fencing.ssh.connect-timeout</name>
+    <value>30000</value>
+  </property>
+
+</configuration>

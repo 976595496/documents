@@ -1,0 +1,17 @@
+<configuration>
+  <property>
+    <name>mapreduce.framework.name</name>
+    <value>yarn</value>
+  </property>
+
+  <!--配置MapReduce JobHistory Server 地址, 默认端口 10020-->
+  <property>
+    <name>mapreduce.jobhistory.address</name>
+    <value>hadoop151:10020</value>
+  </property>
+  <!--配置 MapReduce JobHistory Server web ui 地址, 默认端口19888-->
+  <property>
+    <name>mapreduce.jobhistory.webapp.address</name>
+    <value>hadoop151:19888</value>
+  </property>
+</configuration>
