@@ -271,9 +271,266 @@
 
 
 
+### 高可用集群
+
+保证普通集群可运行后, 修改配置文件
+
+高可用依赖 zookeeper 集群实现主从切换
+
+先搭建 zookeeper 集群, 详见 zookeeper 集群部署
+
+**core-site.xml**
+
+```xml
+<configuration>
+  <property>
+    <name>fs.defaultFS</name>
+    <value>hdfs://nncluster</value>
+  </property>
+  <property>
+    <name>hadoop.tmp.dir</name>
+    <value>/opt/modules/hadoop/data/tmp</value>
+  </property>
+
+  <property>
+    <name>ha.zookeeper.quorum</name>
+    <value>hadoop151:2181,hadoop152:2181,hadoop153:2181,hadoop154:2181,hadoop155:2181</value>
+  </property>
+
+<!--oozie-->
+  <property>
+    <name>hadoop.proxyuser.hadoop.hosts</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.hadoop.groups</name>
+    <value>*</value>
+  </property>
+</configuration>
+```
+
+**hdfs-site.xml**
+
+```xml
+<configuration>
+  <property>
+    <name>dfs.replication</name>
+    <value>3</value>
+  </property>
+
+  <property>
+    <name>dfs.namenode.secondary.http-address</name>
+    <value>hadoop155:50090</value>
+  </property>
+
+  <property>
+    <name>dfs.nameservices</name>
+    <value>nncluster</value>
+  </property>
+
+  <property>
+    <name>dfs.ha.namenodes.nncluster</name>
+    <value>nn1,nn2</value>
+  </property>
+  <property>
+    <name>dfs.namenode.rpc-address.nncluster.nn1</name>
+    <value>hadoop151:8020</value>
+  </property>
+  <property>
+    <name>dfs.namenode.http-address.nncluster.nn1</name>
+    <value>hadoop151:50070</value>
+  </property>
+  <property>
+    <name>dfs.namenode.rpc-address.nncluster.nn2</name>
+    <value>hadoop152:8020</value>
+  </property>
+  <property>
+    <name>dfs.namenode.http-address.nncluster.nn2</name>
+    <value>hadoop152:50070</value>
+  </property>
+  <property>
+    <name>dfs.namenode.shared.edits.dir</name>
+    <value>qjournal://hadoop151:8485;hadoop152:8485;hadoop153:8485;hadoop154:8485;hadoop155:8485/nncluster</value>
+  </property>
+  <property>
+    <name>dfs.journalnode.edits.dir</name>
+    <value>/opt/modules/hadoop/journaldata</value>
+  </property>
+  <property>
+    <name>dfs.ha.automatic-failover.enabled</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>dfs.client.failover.proxy.provider.nncluster</name>
+    <value>org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider</value>
+  </property>
+  <property>
+    <name>dfs.ha.fencing.methods</name>
+    <value>
+        sshfence
+        shell(/bin/true)
+    </value>
+  </property>
+  <property>
+    <name>dfs.ha.fencing.ssh.private-key-files</name>
+    <value>/home/hadoop/.ssh/id_rsa</value>
+  </property>
+  <property>
+    <name>dfs.ha.fencing.ssh.connect-timeout</name>
+    <value>30000</value>
+  </property>
+
+</configuration>
+
+```
+
+**mapred-site.xml**
+
+```xml
+<configuration>
+  <property>
+    <name>mapreduce.framework.name</name>
+    <value>yarn</value>
+  </property>
+
+  <!--配置MapReduce JobHistory Server 地址, 默认端口 10020-->
+  <property>
+    <name>mapreduce.jobhistory.address</name>
+    <value>hadoop151:10020</value>
+  </property>
+  <!--配置 MapReduce JobHistory Server web ui 地址, 默认端口19888-->
+  <property>
+    <name>mapreduce.jobhistory.webapp.address</name>
+    <value>hadoop151:19888</value>
+  </property>
+</configuration>
+```
+
+**yarn-site.xml**
+
+```xml
+<configuration>
+
+<!-- Site specific YARN configuration properties -->
+  <property>
+    <name>yarn.nodemanager.aux-services</name>
+    <value>mapreduce_shuffle</value>
+  </property>
+  
+  <property>
+    <name>yarn.resourcemanager.ha.enabled</name>
+    <value>true</value>
+  </property>
+
+  <!-- 指定RM的cluster id -->
+  <property>
+    <name>yarn.resourcemanager.cluster-id</name>
+    <value>rmcluster</value>
+  </property>
+
+  <!-- 指定RM的名字 -->
+  <property>
+    <name>yarn.resourcemanager.ha.rm-ids</name>
+    <value>rm1,rm2</value>
+  </property>
+
+  <!-- 分别指定RM的地址 -->
+  <property>
+    <name>yarn.resourcemanager.hostname.rm1</name>
+    <value>hadoop153</value>
+  </property>
+  <property>
+    <name>yarn.resourcemanager.hostname.rm2</name>
+    <value>hadoop154</value>
+  </property>
+
+  <!-- 指定zk集群地址 -->
+  <property>
+    <name>yarn.resourcemanager.zk-address</name>
+    <value>hadoop151:2181,hadoop152:2181,hadoop153:2181,hadoop154:2181,hadoop155:2181</value>
+  </property>
+</configuration>
+
+```
 
 
 
+1. 启动所有 zookeeper 节点, jps 可见进程中有 ` QuorumPeerMain`
+
+   
+
+2. 启动所有 `journalnode` 节点
+
+   ```shell
+   $ sbin/hadoop-daemon.sh start journalnode
+   ```
+
+   
+
+3. 格式化 `namenode` 节点, 
+
+   * 在任一 namenode 节点执行格式化命令
+
+   ```shell
+   $ hdfs namenode -format
+   ```
+
+   * 在另一 `namenode` 节点同步格式化数据  core-site.xml 中 `hadoop.tmp.dir` 的值所指向的文件夹
+
+   ```shell
+   $ scp hadoop@hadoop151:/opt/modules/hadoop/etc/hadoop/data/ /opt/modules/hadoop/etc/hadoop/
+   ```
+
+   * 或在另一节点执行命令
+
+   ```shell
+   $ hdfs namenode -bootstrapStandby
+   ```
+
+   
+
+4. 格式化 zkfc, 在 `namenode` 节点执行
+
+   ```shell
+   $ hdfs zkfc -formatZK
+   ```
+
+   
+
+5. 分别启动 hdfs 和 yarn
+
+   ```shell
+   $ sbin/start-dfs.sh
+   $ sbin/start-yarn.sh
+   ```
+
+6. jps 查看各节点, 
+
+   <img src="./hadoop/16.png"/>
+
+7. 访问管理台查看
+
+   <img src="./hadoop/14.png"/>
+
+   <img src="./hadoop/15.png"/>
+
+   可关闭当前`active`状态 namenode, 刷新`standby` 状态页面, 可看到状态变为 `active`
+
+   
+
+8. 也可手动切换 active 节点
+
+   <img src="./hadoop/17.png"/>
+
+   <img src="./hadoop/18.png"/>
+
+   ```shell
+   $ hdfs haadmin -transitionToActive --forcemanual nn1
+   ```
+
+   
+
+   
 
 
 
