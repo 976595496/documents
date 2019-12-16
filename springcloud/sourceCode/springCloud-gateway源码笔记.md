@@ -207,7 +207,7 @@ public class RouteLocatorBuilder {
 
 通过 `RouteSpec`将 `PredicateSpec extend UriSpec`  放进 builder 中
 
-#### 初始化路由定位器
+#### 初始化路由定位器与自定义路由定位器
 
 ```java
 
@@ -341,7 +341,7 @@ public class CustomerRoutePredicateFactory extends AbstractRoutePredicateFactory
 
 这个在配置文件中的配置类似于: - Customer=…..
 
-#### 初始化过滤器
+#### 初始化路由过滤器与自定义路由过滤器
 
 还是上面的源码
 
@@ -416,7 +416,7 @@ public class CustomerGatewayFilterFactory extends AbstractGatewayFilterFactory<C
 
 同样需要在初始化`RouteLocator`前对这个类进行初始化`@Component` 或`@bean`
 
-#### 动态路由
+#### 动态路由与自定义动态路由
 
 ```java
 public class GatewayAutoConfiguration {
@@ -652,3 +652,126 @@ public class CompositeRouteDefinitionLocator implements RouteDefinitionLocator {
 
   也可以使用触发器监听文件或其它行为, 只要能触发这些方法, 就可以, OK
 
+
+
+#### 初始化全局过滤器与自定义全局过滤器
+
+```java
+public class GatewayAutoConfiguration {
+  	//路由谓词处理映射(路径匹配)
+    @Bean
+    public RoutePredicateHandlerMapping routePredicateHandlerMapping(
+        FilteringWebHandler webHandler, RouteLocator routeLocator,
+        GlobalCorsProperties globalCorsProperties, Environment environment) {
+      return new RoutePredicateHandlerMapping(webHandler, routeLocator,
+          globalCorsProperties, environment);
+    }
+  
+  	//web 过滤处理器
+    @Bean
+    public FilteringWebHandler filteringWebHandler(List<GlobalFilter> globalFilters) {
+      return new FilteringWebHandler(globalFilters);
+    }
+  
+    //路由谓词处理映射(路径匹配)
+    @Bean
+    public RoutePredicateHandlerMapping routePredicateHandlerMapping(
+        FilteringWebHandler webHandler, RouteLocator routeLocator,
+        GlobalCorsProperties globalCorsProperties, Environment environment) {
+      return new RoutePredicateHandlerMapping(webHandler, routeLocator,
+          globalCorsProperties, environment);
+    }
+  
+}
+```
+
+```java
+//过滤器处理器, 初始化注入所有全局过滤器放到globalFilters
+public class FilteringWebHandler implements WebHandler {
+	private final List<GatewayFilter> globalFilters;
+	public FilteringWebHandler(List<GlobalFilter> globalFilters) {
+		this.globalFilters = loadFilters(globalFilters);
+	}
+  //通过适配器转化为 GatewayFilter, 进行操作
+	private static List<GatewayFilter> loadFilters(List<GlobalFilter> filters) {
+		return filters.stream().map(filter -> {
+			GatewayFilterAdapter gatewayFilter = new GatewayFilterAdapter(filter);
+			if (filter instanceof Ordered) {
+				int order = ((Ordered) filter).getOrder();
+				return new OrderedGatewayFilter(gatewayFilter, order);
+			}
+			return gatewayFilter;
+		}).collect(Collectors.toList());
+	}
+  
+  //创建调用链, 根据实现的 Ordered排序
+  	@Override
+	public Mono<Void> handle(ServerWebExchange exchange) {
+		Route route = exchange.getRequiredAttribute(GATEWAY_ROUTE_ATTR);
+		List<GatewayFilter> gatewayFilters = route.getFilters();
+		
+		return new DefaultGatewayFilterChain(combined).filter(exchange);
+	}
+  
+  //创建调用链, 根据实现的 Ordered排序
+  private static class DefaultGatewayFilterChain implements GatewayFilterChain {
+		private final List<GatewayFilter> filters;
+		@Override
+		public Mono<Void> filter(ServerWebExchange exchange) {
+			return Mono.defer(() -> {
+				if (this.index < filters.size()) {
+					GatewayFilter filter = filters.get(this.index);
+					DefaultGatewayFilterChain chain = new DefaultGatewayFilterChain(this,
+							this.index + 1);
+					return filter.filter(exchange, chain);
+				}
+				else {
+					return Mono.empty(); // complete
+				}
+			});
+		}
+	}
+  
+	private static class GatewayFilterAdapter implements GatewayFilter {
+		private final GlobalFilter delegate;
+
+		GatewayFilterAdapter(GlobalFilter delegate) {
+			this.delegate = delegate;
+		}
+
+		@Override
+		public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+			return this.delegate.filter(exchange, chain);
+		}
+	}
+}
+```
+
+初始化过程:
+
+* 自动注入, 加载所有实现`GlobalFilter`的过滤器, 注入到过滤器处`FilteringWebHandler`理器中
+* 通过过滤器处理器构造器初始化, 调用内部类适配器适配所有 `GlobalFilter`为`GatewayFilter`,并创建调用链, 调用链的顺序由过滤器实现的 Orderd接口排序
+* 最后将`FilteringWebHandler`注入到`RoutePredicateHandlerMapping`中, 每个请求, 都会通过这个处理器映射器, 然后由处理器映射器调用`FilteringWebHandler`中的`GlobalFilter` 的 filter 方法  对 exchange 进行处理
+
+<img src="./gateway/8.png" />
+
+自定义全局过滤器
+
+实现` GlobalFilter, Ordered, ApplicationListener<EnableBodyCachingEvent>`接口
+
+实现`onApplicationEvent` `filter` `getOrder` 三个方法
+
+```java
+	@Override
+	public void onApplicationEvent(EnableBodyCachingEvent event) {
+		this.routesToCache.putIfAbsent(event.getRouteId(), true);
+	}
+```
+
+固定实现
+
+filter 方法处理 exchange的 request 请求
+
+getOrder返回整数, 表示调用链的调用顺序,
+
+使用@Compnent 或@Bean 自动自动注入
