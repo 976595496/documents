@@ -216,9 +216,507 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 }
 ```
 
-#### 知识点
+EventLoopGroup 默认创建自身所创建的线程数是`当前系统内核数*2`
 
-* EventLoopGroup 默认创建自身所创建的线程数是`当前系统内核数*2`
+#### 自定义 taskQueue
+
+netty业务中如果有耗时任务, 影响到后续业务的执行, 可以将该耗时任务加到 taskQueue 中异步执行, taskQueue 在一个新的线程中执行任务, 可以增加多个任务, 但多个任务是同步执行,
+
+taskQueue有两种: TaskQueue和 ScheduleTaskQueue
+
+`TaskQueue`
+
+```java
+ctx.channel().eventLoop().execute(new Runnable(){
+  	@Override
+  	public void run(){
+      sleep(10*1000);
+      System.out.println("........");
+    }
+})
+```
+
+`ScheduleTaskQueue`
+
+```java
+ctx.channel().eventLoop().schedule(new Runnable(){
+  	@Override
+  	public void run(){
+      sleep(10*1000);
+      System.out.println("........");
+    }
+}, 10, TimeUnit.SECONDS)
+```
+
+
+
+#### 总结
+
+* Netty 抽象出两个`线程池`, BossGroup 专门负责客户端的连接, WorkGroup 专门负责网络读写操作
+* NioEventLoop 表示一个不断循环执行处理任务的线程, 每个 NioEventLoop 都有一个 Selector, 用于监听绑定在其上的 socket 网络通道
+* NioEventLoop 内部采用串行化设计, 从消息的读取->解码->处理->编码->发送, 始终有 I/O线程 NioEventLoop 负责
+  * NioEventLoopGroup 下包含多个 NioEventLoop
+  * 每个 NioEventLoop 中包含一个 Selector, 一个 TaskQueue
+  * 每个 NioEventLoop 的 Selector 上可以注册监听多个 NioChannel
+  * 每个 NioChannel 只会绑定唯一的 NioEventLoop 上
+  * 每个 NioChannel 都绑定有一个自己的 ChannelPipeLine
+
+
+
+### 异步模型
+
+* Netty 中的 I/O操作是异步的, 包括 Bind, write, connect 等操作会简单的返回一个 ChannelFuture.
+* 调用者并不能立刻获得结果, 而是通过 Future-listener 机制, 用户可以方便的主动获取或者通过通知获得 IO操作结果
+* Netty 的异步模型时简历在 future 和 callback 的之上的. 重点说 Future, 他的核心思想是: 假设一个方法 fun, 计算过程可能非常耗时, 等待 fun 返回显然不合适, 那么可以在调用 fun 的时候, 立马返回一个 Future, 后续可以通过 Future 去监控方法 fun 的处理过程(即: Future-Listener 机制)
+
+#### Future-Listener机制
+
+* 当 Future 对象刚刚创建时, 处于非完成状态, 调用者可以通过返回的 ChannelFuture 来获取操作执行的状态, 注册监听函数来执行完成后的操作
+
+* 常见有如下操作
+
+  * 通过 isDone 方法来判断当前操作是否完成
+  * 通过 isSuccess 方法来判断完成的当前操作是否成功
+  * 通过 getCause 方法来获取完成的当前操作失败的原因
+  * 通过 isCannelled 方法来判断已完成的当前操作是否被取消
+  * 通过 addListener 方法来注册监听器, 当操作已完成(isDone 方法返回完成, 将会通知指定的监听器); 付过 Future 对象已完成, 则通知指定的监听器
+
+  ```java
+  	//绑定一个端口并同步 返回一个 ChannelFuture 对象
+              ChannelFuture channelFuture = serverBootstrap.bind(7000).sync();
+              //添加异步事件监听
+              channelFuture.addListener(new GenericFutureListener<Future<? super Void>>() {
+                  @Override
+                  public void operationComplete(Future<? super Void> future) throws Exception {
+                      if (future.isSuccess()){
+  
+                      }
+                      if (future.isDone()){
+  
+                      }
+  
+                  }
+              });
+  ```
+
+### Netty聊天室
+
+* server
+
+  ```java
+  public class ChatServer {
+  
+      private final int PORT = 7000;
+  
+      public void run() throws Exception{
+          EventLoopGroup bossGroup = new NioEventLoopGroup(1);
+          EventLoopGroup workGroup = new NioEventLoopGroup();
+  
+          try {
+              ServerBootstrap serverBootstrap = new ServerBootstrap();
+              serverBootstrap.group(bossGroup, workGroup)
+                      .channel(NioServerSocketChannel.class)
+                      .option(ChannelOption.SO_BACKLOG, 128)
+                      .childOption(ChannelOption.SO_KEEPALIVE, true)
+                      .childHandler(new MyChatServerInitializer());
+  
+              ChannelFuture channelFuture = serverBootstrap.bind(PORT).sync();
+  
+              System.out.println("ChatServer Ready ...");
+              channelFuture.channel().closeFuture().sync();
+  
+  
+          }finally {
+              workGroup.shutdownGracefully();
+              bossGroup.shutdownGracefully();
+          }
+      }
+  
+      public static void main(String[] args) throws Exception {
+          new ChatServer().run();
+      }
+  }
+  ```
+
+  ```java
+  public class MyChatServerInitializer extends ChannelInitializer {
+      @Override
+      protected void initChannel(Channel channel) throws Exception {
+          ChannelPipeline pipeline = channel.pipeline();
+  
+          pipeline.addLast("decoder", new StringDecoder());
+          pipeline.addLast("encoder", new StringEncoder());
+          pipeline.addLast(new MyChatServerHandler());
+      }
+  }
+  ```
+
+  ```java
+  public class MyChatServerHandler extends SimpleChannelInboundHandler<String> {
+      private static ChannelGroup channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+  
+      @Override
+      public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+          Channel channel = ctx.channel();
+          channels.add(channel);
+  
+          String address = channel.remoteAddress().toString();
+          System.out.println(address+"进入群聊...");
+      }
+  
+      @Override
+      public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+          Channel channel = ctx.channel();
+          channels.remove(channel);
+  
+          String address = channel.remoteAddress().toString();
+          System.out.println(address+"离开群聊...");
+      }
+  
+      @Override
+      public void channelActive(ChannelHandlerContext ctx) throws Exception {
+          Channel channel = ctx.channel();
+  
+          String address = channel.remoteAddress().toString();
+          System.out.println(address+"上线...");
+      }
+  
+      @Override
+      public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+          Channel channel = ctx.channel();
+  
+          String address = channel.remoteAddress().toString();
+          System.out.println(address+"下线...");
+      }
+  
+      @Override
+      protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+          Channel channel = ctx.channel();
+          String address = channel.remoteAddress().toString();
+          System.out.println("[客户端 "+address+"]: "+ msg);
+  
+          channels.forEach(ch->{
+              if (ch == channel){
+                  channel.writeAndFlush("[自己]: "+msg+"\n");
+              }else {
+                  ch.writeAndFlush("["+address+"]: "+ msg+"\n");
+              }
+          });
+      }
+  
+      @Override
+      public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+          cause.printStackTrace();
+      }
+  }
+  ```
+
+  
+
+* client
+
+  ```java
+  public class ChatClient {
+  
+      private final String HOST = "127.0.0.1";
+      private final int PORT = 7000;
+  
+      public void connect() throws Exception{
+  
+          EventLoopGroup workGroup = new NioEventLoopGroup();
+          try {
+              Bootstrap bootstrap = new Bootstrap();
+              bootstrap.group(workGroup)
+                      .channel(NioSocketChannel.class)
+                      .handler(new MyChatClientInitializer());
+  
+              ChannelFuture channelFuture = bootstrap.connect(HOST, PORT).sync();
+              Channel channel = channelFuture.channel();
+  
+              System.out.println(channel.localAddress()+" ready ...");
+              System.out.println();
+  
+              Scanner scanner = new Scanner(System.in);
+              while (scanner.hasNext()){
+                  String content = scanner.nextLine();
+                  channel.writeAndFlush(content);
+  
+              }
+  
+  
+          }finally {
+              workGroup.shutdownGracefully();
+          }
+      }
+  
+  
+      public static void main(String[] args) throws Exception {
+          new ChatClient().connect();
+      }
+  }
+  ```
+
+  ```java
+  public class MyChatClientInitializer extends ChannelInitializer {
+      @Override
+      protected void initChannel(Channel channel) throws Exception {
+          ChannelPipeline pipeline = channel.pipeline();
+          pipeline.addLast("decoder", new StringDecoder());
+          pipeline.addLast("encoder", new StringEncoder());
+  
+          pipeline.addLast(new MychatClientHandler());
+      }
+  }
+  ```
+
+  ```java
+  public class MychatClientHandler extends SimpleChannelInboundHandler<String> {
+  
+      @Override
+      protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+          System.out.println(msg);
+      }
+  }
+  ```
+
+### 心跳检测处理
+
+```java
+public class Server {
+    public static void main(String[] args) throws Exception {
+        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
+        EventLoopGroup workGroup = new NioEventLoopGroup();
+
+        try {
+            ServerBootstrap serverBootstrap = new ServerBootstrap();
+            serverBootstrap.group(bossGroup, workGroup)
+                    .channel(NioServerSocketChannel.class)
+                    .option(ChannelOption.SO_BACKLOG, 128)
+                    .childOption(ChannelOption.SO_KEEPALIVE, true)
+                    .handler(new LoggingHandler(LogLevel.INFO))
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        protected void initChannel(SocketChannel socketChannel) throws Exception {
+                            ChannelPipeline pipeline = socketChannel.pipeline();
+                            pipeline.addLast(new IdleStateHandler(2, 3, 5, TimeUnit.SECONDS));
+
+                            pipeline.addLast(new MyIdleHandler());
+                        }
+                    });
+
+            ChannelFuture channelFuture = serverBootstrap.bind(7000).sync();
+
+            channelFuture.channel().closeFuture().sync();
+
+        }finally {
+            workGroup.shutdownGracefully();
+            bossGroup.shutdownGracefully();
+        }
+    }
+}
+```
+
+```java
+public class MyIdleHandler extends ChannelInboundHandlerAdapter {
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        IdleStateEvent event = (IdleStateEvent) evt;
+
+        switch (event.state()){
+            case READER_IDLE:
+                System.out.println("读空闲");
+                break;
+            case WRITER_IDLE:
+                System.out.println("写空闲");
+                break;
+            case ALL_IDLE:
+                System.out.println("读写空闲");
+                break;
+        }
+
+        System.out.println("做相应处理...");
+    }
+}
+```
+
+```java
+public class Client {
+    public static void main(String[] args)throws Exception {
+        EventLoopGroup workGroup = new NioEventLoopGroup();
+
+        try {
+            Bootstrap bootstrap = new Bootstrap();
+            bootstrap.group(workGroup)
+                    .channel(NioSocketChannel.class)
+                    .handler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        protected void initChannel(SocketChannel socketChannel) throws Exception {
+
+                        }
+                    });
+            ChannelFuture channelFuture = bootstrap.connect("127.0.0.1", 7000).sync();
+
+            channelFuture.channel().closeFuture().sync();
+        }finally {
+            workGroup.shutdownGracefully();
+        }
+    }
+}
+```
+
+
+
+### Http升级为 WebSocket 长连接
+
+```java
+public class WebSocketServer {
+
+    public static void main(String[] args) throws Exception {
+        EventLoopGroup bossGroup  = new NioEventLoopGroup(1);
+        EventLoopGroup workGroup = new NioEventLoopGroup();
+
+        try {
+
+            ServerBootstrap serverBootstrap = new ServerBootstrap()
+                    .group(bossGroup, workGroup)
+                    .channel(NioServerSocketChannel.class)
+                    .option(ChannelOption.SO_BACKLOG, 128)
+                    .childOption(ChannelOption.SO_KEEPALIVE, true)
+                    .handler(new LoggingHandler(LogLevel.INFO))
+                    .childHandler(new MyWebSocketChannelInitializer());
+
+            ChannelFuture channelFuture = serverBootstrap.bind(7000).sync();
+            channelFuture.channel().closeFuture().sync();
+
+        }finally {
+            workGroup.shutdownGracefully();
+            bossGroup.shutdownGracefully();
+        }
+    }
+}
+```
+
+```java
+public class MyWebSocketChannelInitializer extends ChannelInitializer {
+    @Override
+    protected void initChannel(Channel channel) throws Exception {
+        ChannelPipeline pipeline = channel.pipeline();
+        //因为基于 http协议, 所以需要 http 的编解码器
+        pipeline.addLast(new HttpServerCodec());
+        //是以块方式写, 所以增加ChunkedWriteHandler处理器
+        pipeline.addLast(new ChunkedWriteHandler());
+
+        //因为 http 在传输过程中是分段的, HttpObjectAggregator可以将多个段聚合,
+        // 这就是为什么当 浏览器发生大量请求是会出现多次 http 请求
+        //聚合 http 请求
+        pipeline.addLast(new HttpObjectAggregator(8192));
+
+        /*
+            1. 对于 webSocket, 它的数据是以帧(frame)形式传递的
+            2. webSocketFrame有六个实现类
+            3. 浏览器请求时发送  ws://localhost:7000/hello
+            4. WebSocketServerProtocolHandler的核心是将 http协议升级为 webSocket, 保持长连接
+        */
+        //将 http协议 升级为 webSocket 协议
+        pipeline.addLast(new WebSocketServerProtocolHandler("/hello"));
+
+        //增加自定义处理器处理业务
+        pipeline.addLast(new MyWebSocketHandler());
+
+    }
+}
+```
+
+```java
+public class MyWebSocketHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
+
+    @Override
+    protected void channelRead0(ChannelHandlerContext ctx, TextWebSocketFrame msgFrame) throws Exception {
+        Channel channel = ctx.channel();
+        String address = channel.remoteAddress().toString();
+        String content = msgFrame.text();
+        System.out.println(address+": "+content);
+
+
+        channel.writeAndFlush(new TextWebSocketFrame("服务器: "+ content));
+    }
+
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        Channel channel = ctx.channel();
+        System.out.println(channel.id().asLongText());
+        System.out.println(channel.id().asShortText());
+        String address = channel.remoteAddress().toString();
+        System.out.println(address+" 开启连接...");
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        Channel channel = ctx.channel();
+        String address = channel.remoteAddress().toString();
+        System.out.println(address+" 断开连接...");
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        cause.printStackTrace();
+    }
+}
+```
+
+```html
+<!DOCTYPE html> <html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <script>
+        var socket; //判断当前浏览器是否支持websocket
+        if(window.WebSocket) {
+        //go on
+        socket = new WebSocket("ws://localhost:7000/hello");
+        //相当于 channelReado, ev 收到服务器端回送的消息
+            socket.onmessage = function (ev) {
+            var rt = document.getElementById("responseText");
+            rt.value = rt.value + "\n" + ev.data; }
+        //相当于连接开启(感知到连接开启)
+            socket.onopen = function (ev) {
+                var rt = document.getElementById("responseText"); rt.value = "连接开启了.."
+            }
+        //相当于连接关闭(感知到连接关闭)
+            socket.onclose = function (ev) {
+            var rt = document.getElementById("responseText");
+            rt.value = rt.value + "\n" + "连接关闭了.."
+            }
+        } else {
+            alert("当前浏览器不支持 websocket")
+        }
+        //发送消息到服务器
+        function send(message) {
+            if(!window.socket) {
+                //先判断 socket 是否创建好
+                return;
+            }
+            if(socket.readyState == WebSocket.OPEN) {
+                //通过 socket 发送消息
+                socket.send(message)
+            } else {
+                alert("连接没有开启");
+            }
+
+        }
+    </script>
+        <form onsubmit="return false">
+            <textarea name="message" style="height: 300px; width: 300px"></textarea>
+            <input type="button" value="发生消息" onclick="send(this.form.message.value)">
+            <textarea id="responseText" style="height: 300px; width: 300px"></textarea>
+            <input type="button" value="清空内容" onclick="document.getElementById('responseText').value=''">
+    </form>
+</body>
+</html>
+```
 
 
 
