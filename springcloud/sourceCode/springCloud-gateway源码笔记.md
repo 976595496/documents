@@ -752,6 +752,9 @@ public class FilteringWebHandler implements WebHandler {
 * 自动注入, 加载所有实现`GlobalFilter`的过滤器, 注入到过滤器处`FilteringWebHandler`理器中
 * 通过过滤器处理器构造器初始化, 调用内部类适配器适配所有 `GlobalFilter`为`GatewayFilter`,并创建调用链, 调用链的顺序由过滤器实现的 Orderd接口排序
 * 最后将`FilteringWebHandler`注入到`RoutePredicateHandlerMapping`中, 每个请求, 都会通过这个处理器映射器, 然后由处理器映射器调用`FilteringWebHandler`中的`GlobalFilter` 的 filter 方法  对 exchange 进行处理
+设计模式:
+* 代理设计模式
+* 适配器设计模式
 
 <img src="./gateway/8.png" />
 
