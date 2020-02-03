@@ -24,7 +24,7 @@ $ yum repolist enabled | grep "mysql.*-community.*"
 
 这一步才是真正安装mysql
 
-$ yum install mysql-community-server
+$ yum install -y mysql-community-server
 
  
 
