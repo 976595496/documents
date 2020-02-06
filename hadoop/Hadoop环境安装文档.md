@@ -225,7 +225,7 @@
         </property>
           <!--resourcemanager节点配置-->
         <property>
-          <name>yarn-resourcemanager.hostname</name>
+          <name>yarn.resourcemanager.hostname</name>
           <value>hadoop223</value>
         </property>
       </configuration>
@@ -239,14 +239,81 @@
       xsync hadoop
       ```
 
-12. 关闭所有节点防火墙
+12. 配置 JobHistory Server 服务(必须)         hadoop:mapred-site.xml (后面 oozie 配置中也提到, 配置过不需要再配置)
+
+    ```xml
+      <!--配置MapReduce JobHistory Server 地址, 默认端口 10020-->
+      <property>
+        <name>mapreduce.jobhistory.address</name>
+        <value>hadoop221:10020</value>
+      </property>
+      <!--配置 MapReduce JobHistory Server web ui 地址, 默认端口19888-->
+      <property>
+        <name>mapreduce.jobhistory.webapp.address</name>
+        <value>hadoop221:19888</value>
+      </property>
+    ```
+
+13. 配置yarn-site.xml
+
+    ```xml
+      <!--任务历史服务-->
+      <property>
+        <name>yarn.log.server.url</name>
+        <value>hadoop221:19888/jobhistory/logs/</value>
+      </property>
+    ```
+
+14. (重启)hadoop集群并启动jobHistoryserver
+
+    ```shell
+    #namenode节点执行
+    sbin/start-dfs.sh
+    
+    #resourcemanager节点执行
+    sbin/start-yarn.sh
+    
+    #nameNode节点执行
+    sbin/mr-jobhistory-daemon.sh start historyserver
+    ```
+
+15. 日志聚集
+
+    概念: 应用运行完成以后, 将程序运行日志信息上传到 HDFS 系统上.
+
+    好处: 可以方便的查看到程序运行的详情, 方便开发调试.
+
+    **注意: **开启日志聚集功能, 需要重启 NodeManager, ResourceManager, 和 HistoryServer.
+
+    yarn-site.xml
+
+    ```xml
+    
+    <!-- 开启日志聚集功能 -->
+    <property>
+    	<name>yarn.log-aggregation-enable</name>
+      <value>true</value>
+    </property>
+    <!-- 日志保留时间设置 7 天 -->
+    <property>
+    	<name>yarn.log-aggregation.retain-seconds</name>
+      <value>604800</value>
+    </property>
+    
+    ```
+
+    
+
+16. 
+
+17. 关闭所有节点防火墙
 
     ```shell
     sudo systemctl stop firewalld
     sudo systemctl disable firewalld
     ```
 
-13. 格式化nameNode节点 启动集群
+18. 格式化nameNode节点 启动集群
 
     ```shell
     hdfs namenode -format #在nameNode节点格式化nameNode
@@ -265,7 +332,7 @@
     | ---------------------------- | ---------------------------- | ---------------------------- |
     |                              |                              |                              |
 
-14. hadoop 集群安装完成
+19. hadoop 集群安装完成
 
 <img src="./hadoop/13.png" />
 
@@ -524,11 +591,11 @@
 
    <img src="./hadoop/18.png"/>
 
-   ```shell
-   $ hdfs haadmin -transitionToActive --forcemanual nn1
-   ```
-
    
+   
+   ```shell
+$ hdfs haadmin -transitionToActive --forcemanual nn1
+   ```
 
    
 
@@ -779,7 +846,7 @@
 
    同步core-site.xml 到其它hadoop节点
 
-6. 配置 JobHistory Server 服务(必须)         hadoop:mapred-site.xml
+6. 配置 JobHistory Server 服务(必须)         hadoop:mapred-site.xml(前面 hadoop 配置中也提到, 配置过不需要再配置)
 
    ```xml
      <!--配置MapReduce JobHistory Server 地址, 默认端口 10020-->
