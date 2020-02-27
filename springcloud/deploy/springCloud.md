@@ -617,6 +617,7 @@ $ consul
        }
    }
    
+   ```
 ```
    
 **@ConditionalOnProperty(prefix = "swagger", name = "open", havingValue = "true")注解:**
@@ -627,9 +628,9 @@ $ consul
    swagger:
      open: true
 ```
-   
+
 此时swagger已经可以在各个模块显示了, mosulehost:port/swagger-ui.html
-   
+
    <img src="./swagger/1.png">
 
 ### Gateway 聚合swagger文档
@@ -736,40 +737,40 @@ $ consul
            return new ResponseEntity(swaggerResourceProvider.get(), HttpStatus.OK);
        }
    }
-```
-   
-现在可以通过gateway查看各个模块的api文档了
-   
-   <img src="./swagger/2.png" />
-
-### 集成bootstrap-ui 界面
-
-1. 修改各个模块的maven包
-
-   ```xml
-   		<!--swagger-->
-           <dependency>
-               <groupId>io.springfox</groupId>
-               <artifactId>springfox-swagger2</artifactId>
-               <version>2.9.2</version>
-           </dependency>
-           <dependency>
-               <groupId>com.github.xiaoymin</groupId>
-               <artifactId>swagger-bootstrap-ui</artifactId>
-               <version>1.9.4</version>
-           </dependency>
    ```
-
    
-
-2. 修改各个模块的javabean配置
-
+   现在可以通过gateway查看各个模块的api文档了
+   
+      <img src="./swagger/2.png" />
+   
+   ### 集成bootstrap-ui 界面
+   
+   1. 修改各个模块的maven包
+   
+      ```xml
+      <!--swagger-->
+                 <dependency>
+                     <groupId>io.springfox</groupId>
+                     <artifactId>springfox-swagger2</artifactId>
+                     <version>2.9.2</version>
+                 </dependency>
+                 <dependency>
+                     <groupId>com.github.xiaoymin</groupId>
+                     <artifactId>swagger-bootstrap-ui</artifactId>
+                     <version>1.9.4</version>
+                 </dependency>
+      ```
+   
+      
+   
+   2. 修改各个模块的javabean配置
+   
    <img src="./swagger/3.png" /> 
-
+   
    现在各个子模块可以查看各自的新界面swagger了   moduleshost:port/doc.html
-
+   
    <img src="./swagger/4.png" />
-
-3. gateway不需要修改, 直接访问 gatewayhost:port/doc.html
+   
+4. gateway不需要修改, 直接访问 gatewayhost:port/doc.html
 
 <img src="./swagger/5.png" />

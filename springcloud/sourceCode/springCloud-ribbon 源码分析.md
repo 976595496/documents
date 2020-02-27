@@ -77,7 +77,7 @@ public abstract class NamedContextFactory<C extends NamedContextFactory.Specific
     }
     //从context中获取获取restClient
     protected AnnotationConfigApplicationContext getContext(String name) {
-        /'/如果不包含这个key, 这里通过name为key 创建restClient环境, 然后再在contex中缓存一份, 将restClient返回. 这里用了双检锁. 
+        //如果不包含这个key, 这里通过name为key 创建restClient环境, 然后再在contex中缓存一份, 将restClient返回. 这里用了双检锁. 
         if (!this.contexts.containsKey(name)) {
             synchronized(this.contexts) {
                 if (!this.contexts.containsKey(name)) {
@@ -186,7 +186,7 @@ public class RibbonApplicationContextInitializer
 
    至此, restClient 加载完毕
 
-此部分用到的设计模式: 工厂设计模式
+此部分用到的设计模式: 工厂设计模式, 监听者模式
 
 
 
@@ -224,7 +224,7 @@ public interface LoadBalancerClient extends ServiceInstanceChooser {
 }
 ```
 
-`LoadBalancerClient`接口与其继承的`ServiceInstanceChooser`有三类抽象方法 `execute``reconstructURI`和`choose`
+`LoadBalancerClient`接口与其继承的`ServiceInstanceChooser`有三类抽象方法 `execute` `reconstructURI`和`choose`
 
 * `choose`选择所使用的service
 * `reconstructURI`通过选择的service, 获取到相应的host, port等信息重构URI
@@ -302,7 +302,7 @@ public class LoadBalancerAutoConfiguration {
 }
 ```
 
-自动配置中有这么个内部类, 这个内部类中最后的拿个配置方法是对restTemplate增加了一个拦截器, 这个拦截器是`LoadBalancerInterceptor`, 顾名思义. 负载均衡拦截器
+自动配置中有这么个内部类, 这个内部类中最后的那个配置方法是对restTemplate增加了一个拦截器, 这个拦截器是`LoadBalancerInterceptor`, 顾名思义. 负载均衡拦截器
 
 查看拦截器源码
 
@@ -395,9 +395,7 @@ ribbon提供了七种负载均衡规则
 | RandomRule                | public class RandomRule extends AbstractLoadBalancerRule     | 随机选择一个server                                           | 在index上随机，选择index对应位置的server                     |
 | ZoneAvoidanceRule         | public class ZoneAvoidanceRule extends PredicateBasedRule    | 复合判断server所在区域的性能和server的可用性选择server       | 默认规则;<br />使用ZoneAvoidancePredicate和AvailabilityPredicate来判断是否选择某个server，前一个判断判定一个zone的运行性能是否可用，剔除不可用的zone（的所有server），AvailabilityPredicate用于过滤掉连接数过多的Server。 |
 
-
-
-我们也可以实现自己的负载均衡规则
+ZoneAvoidanceRule是PredicateBasedRule的一个实现类，只不过这里多一个过滤条件，ZoneAvoidanceRule中的过滤条件是以ZoneAvoidancePredicate为主过滤条件和以AvailabilityPredicate为次过滤条件组成的一个叫做CompositePredicate的组合过滤条件，过滤成功之后，继续采用线性轮询的方式从过滤结果中选择一个出来
 
 如下:
 

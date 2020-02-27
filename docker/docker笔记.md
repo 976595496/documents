@@ -54,7 +54,7 @@ yum install docker-ce-18.06.3.ce
 配置阿里镜像加速器
 
 ```shell
-vim /etc/docker/daemon.json
+vim /etc/docker/daemon.json   
 ```
 
 ```json
@@ -158,7 +158,7 @@ vim /etc/docker/daemon.json
   docker inspect #{containerId} 
   ```
 
-  
+  docker.cnf  mysql.cnf  mysqldump.cnf
 
 * attach 重新进入容器
 
@@ -326,7 +326,7 @@ vim /etc/docker/daemon.json
 
 ```shell
 docker pull mysql:5.7
-docker run -p 3306:3306 --name mysql5.7 -v /test/mysql/conf:/etc/mysql/conf.d -v /test/mysql/data:/var/lib/mysql -v /test/mysql/logs:/logs -e MYSQL_ROOT_PASSWORD=zcz920518 -d mysql:5.7
+docker run -p 3306:3306 --name mysql5.7 -v /test/mysql/conf:/etc/mysql/mysql.conf.d -v /test/mysql/data:/var/lib/mysql -v /test/mysql/logs:/logs -e MYSQL_ROOT_PASSWORD=zcz920518 -d mysql:5.7
 docker exec -it #{containerId} /bin/bash
 ```
 
@@ -335,4 +335,99 @@ docker exec -it #{containerId} /bin/bash
 ```shell
 mysql -uroot -p
 ```
+
+```shell
+# Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License, version 2.0,
+# as published by the Free Software Foundation.
+#
+# This program is also distributed with certain software (including
+# but not limited to OpenSSL) that is licensed under separate terms,
+# as designated in a particular file or component or in included license
+# documentation.  The authors of MySQL hereby grant you an additional
+# permission to link the program and your derivative works with the
+# separately licensed software that they have included with MySQL.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License, version 2.0, for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+
+#
+# The MySQL  Server configuration file.
+#
+# For explanations see
+# http://dev.mysql.com/doc/mysql/en/server-system-variables.html
+[mysql]
+default-character-set=utf8
+
+[mysql.server]
+default-character-set=utf8
+
+[mysql_safe]
+default-character-set=utf8
+
+[client]
+default-character-set=utf8
+
+[mysqld]
+pid-file        = /var/run/mysqld/mysqld.pid
+socket          = /var/run/mysqld/mysqld.sock
+datadir         = /var/lib/mysql
+character_set_server=utf8
+collation-server=utf8_general_ci
+default-storage-engine=INNODB
+lower-case-table-names=1
+
+#log-error      = /var/log/mysql/error.log
+# By default we only accept connections from localhost
+#bind-address   = 127.0.0.1
+# Disabling symbolic-links is recommended to prevent assorted security risks
+symbolic-links=0
+```
+
+
+
+### redis
+
+[redis.conf](./resource/redis.conf)
+
+```shell
+docker pull redis:5
+docker run -d -p 6379:6379 --name=redis1 -v /opt/modules/redis/data/:/data -v /opt/modules/redis/conf/redis.conf:/conf/redis.conf --restart always redis:5 redis-server /conf/redis.conf --appendonly yes
+```
+
+### rabbitmq
+
+```shell
+docker pull rabbitmq:3.8.2
+
+
+#!/bin/bash
+docker run -d --name rabbitmq1 --restart always -p 5672:5672 -p 15672:15672 -v /opt/modules/rabbitmq/data:/var/lib/rabbitmq --hostname rabbit142 -e RABBITMQ_DEFAULT_VHOST=rabbit_142 -e RABBITMQ_DEFAULT_USER=admin -e RABBITMQ_DEFAULT_PASS=admin rabbitmq:3.8.2
+
+docker exec -it rabbitmq1 rabbitmq-plugins enable rabbitmq_management
+```
+
+### jenkins
+
+```shell
+docker pull jenkins
+mkdir -p /opt/modules/jenkins/data
+#需要修改下目录权限, 因为当映射本地数据卷时，/home/docker/jenkins目录的拥有者为root用户，而容器中jenkins user的uid为1000
+chown -R 1000:1000 /opt/modules/jenkins/data
+
+docker run -d -p 8080:8080 -p 50000:50000 --name=jenkins -v /opt/modules/jenkins/data/:/var/jenkins_home jenkins
+
+#初始化密码
+docker exec -it jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+```
+
+
 

@@ -47,7 +47,7 @@ eurekaServer
 int registryCount = this.registry.syncUp();
 ```
 
-`this.registry`是`InstanceRegistry`的实例, 继承自`Eureka` 的`PeerAwareInstanceRegistryImpl`,InstanceRegistry 没有重写`syncUp()`方法, 此方法在父类的实现为
+`this.registry`是`InstanceRegistry`的实例, 继承自`Eureka` 的`PeerAwareInstanceRegistryImpl(对等感知实例注册)`,InstanceRegistry 没有重写`syncUp()`方法, 此方法在父类的实现为
 
 ```java
 //同步其它 EurekaServer 节点的实例注册信息
@@ -64,7 +64,7 @@ public int syncUp() {
                     break;
                 }
             }
-						//eurekaClient获取所有应用遍历每个 eurekaServer, 再遍历 eurekaServer 中的注册应用实例,注册当当前 EurekaServer 中
+						//eurekaClient获取所有应用遍历每个 eurekaServer, 再遍历 eurekaServer 中的注册应用实例,注册到当前 EurekaServer 中
             Applications apps = this.eurekaClient.getApplications();
             Iterator var4 = apps.getRegisteredApplications().iterator();
 
@@ -413,7 +413,7 @@ public void register(InstanceInfo registrant, int leaseDuration, boolean isRepli
 
 **注册信息容器存储结构**
 
-<img src="/Users/zhangchenzhao/Desktop/typera/springcloud/sourceCode/eureka/1.png" />
+<img src="./eureka/1.png" />
 
 eureka 注册器(AbstractInstanceRegistry)中 维护了一个ConcurrentHashMap 作为注册器容器registry来管理实例注册信息, 上图为注册容器内部结构:
 1.以appName为key, ConcurrentHashMap类型的容器为值存储相同应用不同实例集合
@@ -492,7 +492,7 @@ protected void postInit() {
 }
 ```
 
-```
+```java
 /**
  * Evicts everything in the instance registry that has expired, if expiry is enabled.
  *
@@ -667,7 +667,7 @@ eureka Server 在一定时间内没有收到客户端发来的心跳会认为客
 
 Renews threshold 与 Renews (last min)
 
-<img src="/Users/zhangchenzhao/Desktop/typera/springcloud/sourceCode/eureka/2.png" />
+<img src="./eureka/2.png" />
 
 服务器端的续约阀值（Renews threshold）
 
