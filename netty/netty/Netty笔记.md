@@ -54,7 +54,7 @@ I/O复用结合线程池, 就是 Reactor 模式设计思想,
 <img src="./pic/5.png" />
 
 * Reator 对象通过 select 监控客户端请求事件, 收到事件后, 通过 dispatch 进行分发
-* 如果简历连接请求, 则用 accept 通过连接请求处理, 然后创建一个 Handler 对象进行后续事件
+* 如果建立连接请求, 则用 accept 通过连接请求处理, 然后创建一个 Handler 对象进行后续事件
 * 如果不是连接请求, 则由 Reactor 分发调用连接对应的 handler 来处理
 * handler 只负责响应事件, 不做具体的业务处理, 通过该 read 读取数据后,会分发给后面的 worker 线程处理业务
 * worker 线程池会分配独立线程完成真正的业务, 并将结果返回 handler
@@ -267,7 +267,7 @@ ctx.channel().eventLoop().schedule(new Runnable(){
 
 * Netty 中的 I/O操作是异步的, 包括 Bind, write, connect 等操作会简单的返回一个 ChannelFuture.
 * 调用者并不能立刻获得结果, 而是通过 Future-listener 机制, 用户可以方便的主动获取或者通过通知获得 IO操作结果
-* Netty 的异步模型时简历在 future 和 callback 的之上的. 重点说 Future, 他的核心思想是: 假设一个方法 fun, 计算过程可能非常耗时, 等待 fun 返回显然不合适, 那么可以在调用 fun 的时候, 立马返回一个 Future, 后续可以通过 Future 去监控方法 fun 的处理过程(即: Future-Listener 机制)
+* Netty 的异步模型时建立在 future 和 callback 的之上的. 重点说 Future, 他的核心思想是: 假设一个方法 fun, 计算过程可能非常耗时, 等待 fun 返回显然不合适, 那么可以在调用 fun 的时候, 立马返回一个 Future, 后续可以通过 Future 去监控方法 fun 的处理过程(即: Future-Listener 机制)
 
 #### Future-Listener机制
 
@@ -298,6 +298,8 @@ ctx.channel().eventLoop().schedule(new Runnable(){
                   }
               });
   ```
+
+## 编程知识点
 
 ### Netty聊天室
 
@@ -719,6 +721,58 @@ public class MyWebSocketHandler extends SimpleChannelInboundHandler<TextWebSocke
 ```
 
 
+
+### 对象池
+
+https://www.jianshu.com/p/3bfe0de2b022
+
+
+
+### 内存池
+
+https://www.jianshu.com/p/8d894e42b6e6
+
+
+
+### Netty中的零拷贝
+
+
+
+通常未实现零拷贝时, 数据发送需要四次拷贝步骤:
+
+1. 将数据从磁盘读取到 内核缓冲区的read Buffer
+2. 将内核缓冲区的 read Buffer 拷贝到用户缓冲区中
+3. 将数据从用户缓冲区拷贝到 内核缓冲区的 Socket Buffer 中
+4. 将 内核缓冲区的 Socket Buffer 拷贝到网卡接口的缓冲区中
+
+
+
+NIO中 `FileChannel::transferTo` 方法去掉了第 2 步和第3 步,  变成:
+
+1. 将数据从磁盘读取到内核缓冲区 read Buffer 中
+2. 将内核缓冲区 read Buffer 数据拷贝到网卡接口缓冲区
+
+这两步操作不需要 CPU 的操作, 实现零拷贝, 为系统减少资源消耗
+
+
+
+Netty 中实现了 `DirectByteBuf`, `HeapByteBuf`, `CompositeByteBuf`
+
+1. `DirectByteBuf` 是 netty 实现的直接分配机器内存的缓冲区, 并在 jvm 内建立引用
+2. `HeapByteBuf`是分配在堆内存的缓冲区
+3. `CompositeByteBuf` 可以直接操作多个 Buffer, 单不需要合并的 缓冲区操作类, 避免了缓冲区合并的数据拷贝
+
+NIO 缓冲区的实现, 需要现将 JVM 中的数据拷贝到机器内存中, 再将数据拷贝到内核缓冲区 SocketBuffer中, `DirectByteBuf`缓冲区的实现, 避免了将数据从 JVM 到机器内存的拷贝
+
+
+
+**总结:** netty 实现零拷贝
+
+```
+1. netty 实现DirectByteBuf 避免将 JVM 内存数据拷贝到机器内从中
+2. CompositeByteBuf 可以操作多个 ByteBuf 而不需要合并,减少 ByteBuf 的拷贝合并
+3. 使用 NIO 的 TransferTo 实现的操作系统零拷贝机制
+```
 
 
 

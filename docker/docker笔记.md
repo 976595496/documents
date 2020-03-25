@@ -1,8 +1,10 @@
 # docker笔记
 
-## 安装
+## 安装 
 
-### centOS7
+环境 centOS7
+
+### 安装 docker
 
 ```shell
 yum remove docker \
@@ -71,6 +73,19 @@ vim /etc/docker/daemon.json
 
 <img src="./pic/3.png" />
 
+### 安装 docker-compose
+
+1. 第一种: 受网络限制
+
+   ```
+   # curl -L https://github.com/docker/compose/releases/download/1.24.1/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose 
+   
+   # chmod +x /usr/local/bin/docker-compose
+   # docker-compose --version
+   ```
+
+2. 如果第一种不行, 使用 python-pip安装 docker-compose
+
 
 
 ## 操作笔记
@@ -106,7 +121,7 @@ vim /etc/docker/daemon.json
 
   --name: 起别名
 
-  一般-i 和 -t一起使用, 但不加-p 属于前台启动容器, 当使用 exit 退出时,容器也就关闭了 可以使用`ctl+P+Q` 退出保证容器不关闭, 或者直接使用-p 后台运行容器
+  一般-i 和 -t一起使用, 但不加-p 属于前台启动容器, 当使用 exit 退出时,容器也就关闭了 可以使用`ctl+P+Q` 退出保证容器不关闭, 或者直接使用-d 后台运行容器
 
   ```shell
   docker run -it --name mycentos centos:7  #交互模式前台启动容器, 随机生成一个容器 id
@@ -228,7 +243,7 @@ vim /etc/docker/daemon.json
   * 执行一条指令并对容器作出修改
   * 执行类似 docker commit 的操作提交一个新的镜像层
   * docker 再给予刚提交的镜像运行一个新容器
-  * 执行 dockerfile 中的下一条指令知道所有指定都执行完成
+  * 执行 dockerfile 中的下一条指令直到所有指令都执行完成
 
 * docker 保留字指令
 
@@ -256,7 +271,7 @@ vim /etc/docker/daemon.json
 
   * `CMD` 指定容器启动时要运行的命令; Dockerfile 中可以有多个 CMD 指定, 但只有最后一个生效, CMD 会被 docker run 之后的参数替换 
 
-  * `ENTRYPOINT` 指定容器启动是要运行的命令; 不会被覆盖
+  * `ENTRYPOINT` 指定容器启动时要运行的命令; 不会被覆盖
 
   * `ONBUILD` 当构建一个被继承的 Dockerfile 时运行命令, 当前镜像的ONBUILD指定在被其它镜像继承构建时触发
 
@@ -270,7 +285,7 @@ vim /etc/docker/daemon.json
     | ONBUILD           |         |            |
     | .dockerfileignore |         |            |
 
-* 联系 1
+* 练习 1
 
   ```shell
   FROM centos:7

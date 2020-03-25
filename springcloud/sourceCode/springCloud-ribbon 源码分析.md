@@ -302,7 +302,7 @@ public class LoadBalancerAutoConfiguration {
 }
 ```
 
-自动配置中有这么个内部类, 这个内部类中最后的那个配置方法是对restTemplate增加了一个拦截器, 这个拦截器是`LoadBalancerInterceptor`, 顾名思义. 负载均衡拦截器
+自动配置中有这么个内部类, 这个内部类中最后的那个配置方法是对restTemplate增加了一个拦截器, 这个拦截器是`AsyncClientHttpRequestInterceptor`, 顾名思义. 负载均衡拦截器
 
 查看拦截器源码
 

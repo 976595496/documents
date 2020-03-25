@@ -198,7 +198,7 @@ redis 特性
 * `hash` 哈希类型的内部编码有2种
 
   * `ziplist`(压缩列表): 当哈希类型元素个数小于 `hash-max-ziplist-entries`配置(默认 512 个)、同时所有值都小于 `hash-max-ziplist-value`配置(默认 64 字节)时, redis 会使用 `ziplist` 作为哈希的内部实现, ziplist 使用更加紧凑结构实现多个元素的连续存储, 所以在节省内存方面比 hashtable 更加优秀
-  * `hashtable`(哈希表):当哈希类型无法满足`ziplist`的条件时, redis 会使用 `hashtable` 作为哈希的内部实现,因为此时 `ziplist` 的腹泻效率会下降, 而`hashtable`的读写时间复杂度为 O(1)
+  * `hashtable`(哈希表):当哈希类型无法满足`ziplist`的条件时, redis 会使用 `hashtable` 作为哈希的内部实现,因为此时 `ziplist` 的复写效率会下降, 而`hashtable`的读写时间复杂度为 O(1)
 
 * `list` 列表类型在 redis3.2 前有 2 种, redis3.2 后有一种
 
@@ -209,11 +209,11 @@ redis 特性
 
     Redis3.2后
 
-  * quicklist: 结合 ziplist 和 linkedlist 的有点的新类型
+  * quicklist: 结合 ziplist 和 linkedlist 的优点的新类型
 
 * `set`集合类型的内部编码有 2 种
 
-  * `intset`整数集合: 当集合中的元素都是整数切元素个数小于`set-max-intset-entries`配置(默认 512 个)时, redis 会选择 `intset` 作为内部实现, 减少内存的使用.
+  * `intset`整数集合: 当集合中的元素都是整数且元素个数小于`set-max-intset-entries`配置(默认 512 个)时, redis 会选择 `intset` 作为内部实现, 减少内存的使用.
   * `hashtable`哈希表: 当集合类型无法满足 intset 的条件时, redis 会使用 hashtable 作为集合的内部实现
 
 * `zset`有序集合类型的内部编码有 2 种

@@ -1,4 +1,6 @@
-# JVM 调优
+#  JVM 调优
+
+[命令博客](https://mp.weixin.qq.com/s?__biz=MzAxODcyNjEzNQ==&mid=2247488758&idx=1&sn=22c85fc8d774a14ac73be99c82eb1d0a&chksm=9bd0b96eaca73078e0f1da9979d3c90facf734c0279c69478aeab737eea43b287242cdf1b544&mpshare=1&scene=23&srcid=&sharer_sharetime=1572830028774&sharer_shareid=fe443da7e2b002d46d24a5e4deda39f5#rd)
 
 ## 常用参数
 
@@ -8,7 +10,15 @@
 
 -XX:NewSize 新生代内存    -XX:MaxNewSize   最大新生代内存
 
--XX:NewRatio 新生代老年代比例    -XX:SurvivorRatio   Survivor区比例
+-XX:NewRatio 新生代老年代比例    
+
+-XX:SurvivorRatio   Survivor区比例
+
+-XX:OldSize   老年代大小
+
+
+
+-XX:MinHeapFreeRatio     -XX:MaxHeapFreeRatio
 
 
 
@@ -25,6 +35,20 @@
 -XX:ReservedCodeCacheSize  CodeCache 最大大小
 
 
+
+GC
+
+-XX:CMSInitiatingOccupancyFraction=68 （默认是 68）
+
+-XX:+UseCMSInitiatingOccupancyOnly
+
+-XX:+UseCMSCompactAtFullCollection：允许在 Full GC 时，启用压缩式 GC
+
+-XX:CMSFullGCBeforeCompaction=n     在进行 n 次，CMS 后，进行一次压缩的 Full GC，用以减少 CMS 产生的碎片
+
+-XX:PreternureSizeThreshold 大对象直接分配到老年代: 
+
+-XX:MaxTenuringThreshold  长期存活对象进入老年代:设置对象年龄进入老年代
 
 
 
@@ -150,6 +174,8 @@ java -jar -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=7015 **.
 
 
 ###jvisualVM+Btrace
+
+
 
 
 
@@ -380,7 +406,7 @@ GCViewer
 * 除非确定, 否则不要设置最大堆内存
 * 优先设置吞吐量目标
 * 如果吞吐量目标达不到, 调大最大内存, 不让 OS 使用 Swap, 如果仍然达不到, 降低目标
-* 吞吐量能达到, GC 时间太长, 设置丁顿时间的目标
+* 吞吐量能达到, GC 时间太长, 设置停顿时间的目标
 
 ### G1 GC调优
 
@@ -410,6 +436,50 @@ javap -verbose ${java文件}
 [本地变量表文档](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-2.html#jvms-2.6.1)
 
 [java 虚拟机规范](https://docs.oracle.com/javase/specs/jvms/se8/html/index.html)
+
+
+
+
+
+## 远程监控
+
+两种工具 jconsole,  jvisualVM
+
+操作类似, jconsole 是 jdk 自带的命令
+
+终端输入  `jconsole `命令
+
+<img src="./pic/10.png" />
+
+ <img src="./pic/11.png" />
+
+功能还是非常全的, 我们也可以下载 jvisualVM 工具进行对 JVM 的监控(jdk7以后就不需要下载了, jdk 中已经将它集成了, 只需要安装 jdk7 以后的 jdk 并配置环境变量, 或到 bin 目录下)
+
+键入  jvisualvm
+
+
+
+jvisualVM 演示效果
+
+<img src="./pic/12.png" />
+
+
+
+开启远程监控端口地址
+
+`-Dcom.sun.management.jmxremote.port=10099` 是远程连接时候的端口，默认是1099
+
+`-Djava.rmi.server.hostname=10.132.6.77` 是远程连接时候的地址
+
+```shell
+java  \
+-Djava.rmi.server.hostname=10.132.6.77 \
+-Dcom.sun.management.jmxremote \
+-Dcom.sun.management.jmxremote.port=10099 \
+-Dcom.sun.management.jmxremote.authenticate=false \
+-Dcom.sun.management.jmxremote.ssl=false \
+-jar demo.jar --spring.profiles.active=pro & 
+```
 
 
 

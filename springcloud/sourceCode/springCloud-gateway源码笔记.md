@@ -316,7 +316,7 @@ public class RouteDefinitionRouteLocator
 定义`predicate` 继承 `AbstractRoutePredicateFactory`, 并定义内部类 `Config`, 如下:
 
 ```java
-public class CustomerRoutePredicateFactory extends AbstractRoutePredicateFactory<PathRoutePredicateFactory.Config> {
+public class CustomerRoutePredicateFactory extends AbstractRoutePredicateFactory<CustomerRoutePredicateFactory.Config> {
     public PathRoutePredicateFactory() {
 			super(Config.class);
 		}
@@ -585,7 +585,7 @@ public class CompositeRouteDefinitionLocator implements RouteDefinitionLocator {
    }
    ```
 
-   返回值`Flux<Route>`是`RouteDefinitionLocator`中所有`RouteDefinitionLocator`的所有路由定义, 让然也包括`InMemoryRouteDefinitionRepository`的
+   返回值`Flux<Route>`是`RouteDefinitionLocator`中所有`RouteDefinitionLocator`的所有路由定义, 当然也包括`InMemoryRouteDefinitionRepository`的
 
 这个路径走通的话, 是不是就可以动态的向 gateway 中增加和删除路由了呢!!!!!!!!!! 我觉得是的!!!!!!!!!!!!
 

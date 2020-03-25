@@ -12,7 +12,7 @@
 
   * 每个 channel 都会对应一个 Buffer
   * Selector 对应一个线程, 一个线程对应多个 channel
-  * 改图反映了有三个 channel 注册到该 selector
+  * 该图反映了有三个 channel 注册到该 selector
   * 程序切换到哪个 channel 是由事件决定的, Event 是一个重要的概念
   * Selector 会根据不同的时间, 在各个通道上切换
   * Buffer 就是一个内存块, 底层是由一个数组
@@ -53,8 +53,9 @@
 ### 通道(Channel)
 
 * 基本介绍
-  * BIO 中的 stream 是单向的, 例如 FileInputStream 对象只能进行读取数据的操作, 而 NIO 中的通道(Channel)是双向的, 可以读操作, 也可以写操作
-
+  
+* BIO 中的 stream 是单向的, 例如 FileInputStream 对象只能进行读取数据的操作, 而 NIO 中的通道(Channel)是双向的, 可以读操作, 也可以写操作
+  
 * 类继承图
 
   <img src="./pic/6.png" />

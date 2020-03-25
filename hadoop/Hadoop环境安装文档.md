@@ -516,6 +516,16 @@
     <name>yarn.resourcemanager.zk-address</name>
     <value>hadoop151:2181,hadoop152:2181,hadoop153:2181,hadoop154:2181,hadoop155:2181</value>
   </property>
+  <!-- 开启日志聚集功能 -->
+  <property>
+    <name>yarn.log-aggregation-enable</name>
+    <value>true</value>
+  </property>
+  <!-- 日志保留时间设置 7 天 -->
+  <property>
+    <name>yarn.log-aggregation.retain-seconds</name>
+    <value>604800</value>
+  </property>
 </configuration>
 
 ```
@@ -545,7 +555,7 @@
    * 在另一 `namenode` 节点同步格式化数据  core-site.xml 中 `hadoop.tmp.dir` 的值所指向的文件夹
 
    ```shell
-   $ scp hadoop@hadoop151:/opt/modules/hadoop/etc/hadoop/data/ /opt/modules/hadoop/etc/hadoop/
+   $ scp -r hadoop@hadoop151:/opt/modules/hadoop/data/ /opt/modules/hadoop/
    ```
 
    * 或在另一节点执行命令

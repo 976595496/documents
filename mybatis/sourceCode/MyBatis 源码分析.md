@@ -4,7 +4,7 @@
 
 ## session
 
-1. SqlSession: interfact, 代表一个连接数据库的会话, 提供了一个默认的 DefaultSqlSession
+1. SqlSession: interface, 代表一个连接数据库的会话, 提供了一个默认的 DefaultSqlSession
 
 2. SqlSessionFactory: interfact, 创建 SqlSessionFactory 的工厂, 提供了默认的 DefaultSqlSessionFactory创建 DefaultSqlSession, (这里使用**工厂方法设计模式**)
 

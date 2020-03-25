@@ -672,14 +672,15 @@ Renews threshold 与 Renews (last min)
 服务器端的续约阀值（Renews threshold）
 
 ```
-this.expectedNumberOfRenewsPerMin = count * 2; this.numberOfRenewsPerMinThreshold = (int) (this.expectedNumberOfRenewsPerMin * serverConfig.getRenewalPercentThreshold());
+this.expectedNumberOfRenewsPerMin = count * 2; 
+this.numberOfRenewsPerMinThreshold = (int) (this.expectedNumberOfRenewsPerMin * serverConfig.getRenewalPercentThreshold());
 ```
 
 
 
 其中 ， count 为 服务器的数量 。 2 为每 30 秒 1 个心跳 ， 每分钟 2 个心跳的固定频率因。
 
-归纳出的公式为： 2M * renewalPercentThreshold ， M 为服务器的个数 ， renewalPercentThreshold 默认为 0.85（可以通过 eureka .server . renewal-percent-threshold 配置） ， 计算结果只保留整数位 。
+归纳出的公式为： 2M * renewalPercentThreshold ， M 为服务器的个数 ， renewalPercentThreshold 默认为 0.85（可以通过 `eureka .server . renewal-percent-threshold` 配置） ， 计算结果只保留整数位 。
 
 其实这就是个固定值 ， 对于每个 Eureka Server 来说 ， M 只能取 1 。 代码达到的效果是：
 
@@ -689,11 +690,18 @@ this.expectedNumberOfRenewsPerMin = count * 2; this.numberOfRenewsPerMinThreshol
 
 客户端的续约阀值（Renews threshold）
 
-if (this.expectedNumberOfRenewsPerMin > 0) { this.expectedNumberOfRenewsPerMin = this.expectedNumberOfRenewsPerMin + 2; this.numberOfRenewsPerMinThreshold = (int) (this.expectedNumberOfRenewsPerMin * serverConfig.getRenewalPercentThreshold()); }
+```java
+if (this.expectedNumberOfRenewsPerMin > 0) { 
+  this.expectedNumberOfRenewsPerMin = this.expectedNumberOfRenewsPerMin + 2; 		
+  this.numberOfRenewsPerMinThreshold = (int) (this.expectedNumberOfRenewsPerMin * serverConfig.getRenewalPercentThreshold()); 
+}
+```
+
+
 
 注：上面贴出的 PeerAwareInstanceRegistryImpl 继承自 AbstractInstanceRegistry 。
 
-它们共享 expectedNumberOfRenewsPerMin 和 numberOfRenewsPerMinThreshold 属性，
+它们共享 expectedNumberOfRenewsPerMin (预期每分钟续订数)和 numberOfRenewsPerMinThreshold 属性，
 
 具体可自行翻阅源码。
 
@@ -719,11 +727,11 @@ N = 3 –> (2 + 2 + 2 + 2) * renewalPercentThreshold
 
 EMERGENCY! EUREKA MAY BE INCORRECTLY CLAIMING INSTANCES ARE UP WHEN THEY’RE NOT. RENEWALS ARE LESSER THAN THRESHOLD AND HENCE THE INSTANCES ARE NOT BEING EXPIRED JUST TO BE SAFE.
 
-这种情况下 ， 由于 Eureka Server 没有对等的节点 ， 同步不到服务注册信息 ， 默认需等待 5 分钟（可以通过 eureka.server.wait-time-in-ms-when-sync-empty 配置） 。 即 5 分钟之后你应该看到此警告信息 。
+这种情况下 ， 由于 Eureka Server 没有对等的节点 ， 同步不到服务注册信息 ， 默认需等待 5 分钟（可以通过 `eureka.server.wait-time-in-ms-when-sync-empty `配置） 。 即 5 分钟之后你应该看到此警告信息 。
 
 为避免这种情况发生 ， 你可以：
 
-关闭自我保护模式（ eureka.server.enable-self-preservation 设为 false）
+关闭自我保护模式（ `eureka.server.enable-self-preservation` 设为 false）
 
 降低 renewalPercentThreshold 的比例（ eureka.server.renewal-percent-threshold 设置为 0.5 以下 ， 比如 0.49）
 
