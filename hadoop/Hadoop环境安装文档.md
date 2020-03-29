@@ -1417,6 +1417,170 @@ namenode 向客户端返回元数据下载位置, 是需要计算网络节点距
 
 
 
+## DataNode管理
+
+### 与 NameNode 通信
+
+<img src="./hadoop/27.png" />
+
+1. dataNode向 nameNode发送注册节点请求
+
+2. nameNode 将数据写入到元数据存储, 并返回节点注册成功
+
+3. dataNode 周期性向 nameNode 上报节点数据信息, 保证 nameNode 元数据与 dataNode 节点数据一致
+
+4. dataNode 每 3 秒向 nameNode 发送心跳, nameNode 返回没有执行命令的确认数据
+
+5. nameNode 超过 10 分钟没有收到某 dataNode心跳, 认为该节点不可用
+
+   - 时长计算2 *  dfs.namenode.heartbeat.recheck-interval + 10 * dfs.heartbeat.interval
+   - dfs.namenode.heartbeat.recheck-interval 默认 5 分钟 
+   - dfs.heartbeat.interval默认3 秒
+   - 所以时长是 10min 30s
+
+   hdfs-site.xml
+
+   ```xml
+   <property>
+       <name>dfs.namenode.heartbeat.recheck-interval</name>
+       <value>300000</value>
+       <description>单位毫秒</description>
+   </property>
+   <property>
+       <name>dfs.heartbeat.interval</name>
+       <value>3</value>
+       <description>单位秒</description>
+   </property>
+   ```
+
+   
+
+### 服役新节点
+
+1. 准备干净的服务节点, 确认网络正常, 设置 ssh 免密
+
+2. 配置 hadoop 配置文件,或直接复制现有节点, 配置网络
+
+3. 直接启动 dataNode 服务
+
+   ```shell
+   hadoop-daemon.sh start datanode
+   ```
+
+4. 启动 nodeManager 服务
+
+   ```shell
+   [atguigu@hadoop105 hadoop-2.7.2]$ sbin/yarn-daemon.sh start nodemanager
+   ```
+
+5. 使用命令实现集群的再平衡(再数据不平衡下使用)
+
+   ```shell
+   ./start-balancer.sh
+   ```
+
+### 退役旧节点
+
+- 添加白名单:添加到白名单的主机节点，都允许访问NameNode，不在白名单的主机节点，都会被退出
+
+  1. 在NameNode的/opt/module/hadoop/etc/hadoop目录下创建dfs.hosts文件
+
+     ```shell
+     vi dfs.hosts
+     ```
+
+  2. 添加白名单节点
+
+     ```
+     hadoop162
+     hadoop163
+     hadoop164
+     ```
+
+  3. 在 nameNode 节点的 hdfs-site.xml配置启动白名单dfs.hosts
+
+     ```xml
+     <property>
+     		<name>dfs.hosts</name>
+     		<value>/opt/module/hadoop/etc/hadoop/dfs.hosts</value>
+     </property>
+     
+     ```
+
+  4. 分发同步到所有节点
+
+     ```shell
+     xsync hdfs-site.xml
+     ```
+
+  5. 刷新 nameNode
+
+     ```shell
+     hdfs dfsadmin -refreshNodes
+     ```
+
+  6. 更新ResourceManager节点
+
+     ```shell
+     yarn rmadmin -refreshNodes
+     ```
+
+  7. 使用命令实现集群的再平衡(再数据不平衡下使用)
+
+     ```
+     ./start-balancer.sh
+     ```
+
+     
+
+- 黑名单退役: 在黑名单上面的主机都会被强制退出
+
+  1. 在nameNode的/opt/module/hadoop/etc/hadoop目录下创建dfs.hosts.exclude文件
+
+     ```shell
+     vi dfs.hosts.exclude
+     ```
+
+  2. 添加退役节点
+
+     ```
+     hadoop165
+     ```
+
+  3. 在nameNode的hdfs-site.xml配置文件中增加dfs.hosts.exclude属性
+
+     ```xml
+     <property>
+     		<name>dfs.hosts.exclude</name>
+         <value>/opt/module/hadoop/etc/hadoop/dfs.hosts.exclude</value>
+     </property>
+     
+     ```
+
+  4. 刷新NameNode、刷新ResourceManager
+
+     ```shell
+     hdfs dfsadmin -refreshNodes
+     yarn rmadmin -refreshNodes
+     ```
+
+  5. 如果副本数小于等于当前集群节点数, 退役会失败, 需要修改副本数
+
+  6. 在退役节点上, 停止节点服务
+
+     ```shell
+     hadoop-daemon.sh stop datanode
+     yarn-daemon.sh stop nodemanager
+     ```
+
+  7. 使用命令实现集群的再平衡(再数据不平衡下使用)
+
+     ```shell
+     ./start-balancer.sh
+     ```
+
+     
+
 
 
 ## Hive 安装配置教程
