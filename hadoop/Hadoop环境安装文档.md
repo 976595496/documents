@@ -4,6 +4,91 @@
 
 # Hadoop环境安装文档
 
+## Hadoop 编译 64 位 
+
+### 准备
+
+jdk8
+
+apache-ant-1.9.14-bin.tar.gz
+
+apache-maven-3.6.3-bin.tar.gz
+
+protobuf-2.5.0.tar.gz
+
+hadoop-2.9.2-src.tar.gz
+
+### 安装环境
+
+1. 配置 jdk
+
+   ```
+   tar -zxvf jdk -C /opt/modules/
+   配置环境变量 省略...
+   ```
+
+2. 配置 配置 maven
+
+   ```
+   tar -zxvf apache-maven-3.6.3-bin.tar.gz -C /opt/modules/
+   配置环境变量 省略...
+   vim conf/setting.xml
+   <mirror>
+      <id>nexus-aliyun</id>
+      <mirrorOf>central</mirrorOf>
+      <name>Nexus aliyun</name>
+      <url>http://maven.aliyun.com/nexus/content/groups/public</url>
+   </mirror>
+   ```
+
+3. 配置 ant
+
+   ```
+   tar -zxvf apache-ant-1.9.14-bin.tar.gz -C /opt/modules/
+   配置环境变量 省略...
+   ```
+
+4. 编译安装 protobuf
+
+   ```
+   tar -zxvf protobuf-2.5.0.tar.gz -C /opt/modules/
+   yum install -y yum install glibc-headers gcc-c++ make cmake openssl-devel ncurses-devel
+   cd protobuf-2.5.0/
+   ./configure
+   make
+   make check 
+   make install
+   ldconfig
+   
+   配置环境变量
+   export LD_LIBRARY_PATH=/opt/module/protobuf-2.5.0
+   export PATH=$PATH:$LD_LIBRARY_PATH
+   ```
+
+5. 
+
+### 编译
+
+1. 解压 hadoop-2.9.2-src
+
+   ```
+   tar -zxvf hadoop-2.9.2-src
+   ```
+
+2. 开始编译
+
+   ```
+   mvn package -Pdist,native -DskipTests -Dtar
+   ```
+
+3. 编译成功后, 包位置
+
+   ```
+   /opt/source/hadoop-2.9.2-src/hadoop-dist/target
+   ```
+
+   
+
 ## hadoop集群
 
 ### 准备
@@ -318,6 +403,7 @@
     ```shell
     hdfs namenode -format #在nameNode节点格式化nameNode
     sbin/start-dfs.sh #在nameNode节点启动hdfs各节点
+    mr-jobhistory-daemon.sh start historyserver #启动历史服务
     ```
 
     | <img src="./hadoop/7.png"/> | <img src="./hadoop/8.png"/> | <img src="./hadoop/9.png"/> |
@@ -608,6 +694,726 @@ $ hdfs haadmin -transitionToActive --forcemanual nn1
    ```
 
    
+
+## Hadoop shell 命令
+
+### hadoop 与 hdfs
+
+```shell
+bin/hadoop fs Command
+或 
+bin/hdfs dfs Command
+```
+
+hadoop 命令包含 hdfs 命令,   dfs 是 fs 的实现类
+
+### FileSystem shell
+
+1. 文件命令 `-help` 查看 hadoop 或 hdfs 命令的参数
+
+   ```shell
+   hdfs dfs -help rm
+   或
+   hadoop fs -help rm
+   ```
+
+2. `-ls`: 显示目录信息
+
+   ```shell
+   hdfs dfs -ls /
+   或
+   hadoop fs -ls /
+   ```
+
+3. `-mkdir`：HDFS上创建目录, 与 linux 系统命令一样
+
+   ```shell
+   hdfs dfs -mkdir -p /user/zcz
+   或
+   hadoop fs -mkdir -p /user/zcz
+   ```
+
+4. `-count` 检查hdfs 文件夹的使用情况和限额
+
+   ```shell
+   hdfs dfs -count -q /user/zcz
+   或
+   hadoop fs -count -q /user/zcz
+   ```
+
+5. `-df` 查看目标剩余空间
+
+   ```shell
+   hdfs dfs -df -h /user/zcz
+   或
+   hadoop fs -df -h /user/zcz
+   ```
+
+6. `-du` 查看文件或文件夹 占用空间
+
+   ```shell
+   hdfs dfs -du -h /user/zcz/zcz.xml
+   或
+   hadoop fs -du -h /user/zcz/zcz.xml
+   ```
+
+   
+
+7. `-moveFromLocal`：从本地剪切到HDFS
+
+   ```shell
+   touch test.xml #本地创建文件
+   hdfs dfs -moveFromLocal test.xml /user/zcz/
+   或
+   hadoop fs -moveFromLocal test.xml /user/zcz/
+   ```
+
+8. `-appendToFile`：a 文件追加到 b 文件末尾
+
+   ```shell
+   hdfs dfs -appendToFile zcz.xml /user/zcz/test.xml
+   或
+   hadoop fs -appendToFile zcz.xml /user/zcz/test.xml
+   
+   ```
+
+9. `-cat` 查看文件内容
+
+   ```shell
+   hdfs dfs -cat /user/zcz/test.xml
+   或
+   hadoop fs -cat /user/zcz/test.xml
+   
+   ```
+
+10. `-chgrp` 修改文件权限
+
+    ```
+    hdfs dfs -chgrp hadoop /user/zcz/test.xml
+    或
+    hadoop fs -chgrp hadoop /user/zcz/test.xml
+    
+    ```
+
+11. `-chmod` 修改文件执行权限
+
+    ```shell
+    hdfs dfs -chmod 666 /user/zcz/test.xml
+    或
+    hadoop fs -chmod 666 /user/zcz/test.xml
+    
+    ```
+
+12. `-chown` 修改文件所属用户及用户组
+
+    ```shell
+    hdfs dfs -chown -R hadoop:hadoop /user
+    或
+    hadoop fs -chown -R hadoop:hadoop /user
+    
+    ```
+
+13. `-copyFromLocal` 从本地 copy 文件到 hdfs, 等同于 `-put`
+
+    ```shell
+    hdfs dfs -copyFromLocal zcz.xml /user/zcz/
+    或
+    hadoop fs -copyFromLocal zcz.xml /user/zcz/
+    
+    ```
+
+14. `-copyToLocal` 从 hdfs 拷贝文件到本地, 等同于 `-get`
+
+    ```shell
+    hdfs dfs -copyToLocal /user/zcz/test.xml ./
+    或
+    hadoop fs -copyToLocal /user/zcz/test.xml ./
+    
+    ```
+
+15. `-cp` hdfs 内 copy
+
+    ```
+    hdfs dfs -cp /user/zcz/test.xml /user/
+    或
+    hadoop fs -cp /user/zcz/test.xml /user/
+    
+    ```
+
+16. `-mv` hdfs 内 移动文件
+
+    ```
+    hdfs dfs -mv /user/zcz/test.xml /user/
+    或
+    hadoop fs -mv/user/zcz/test.xml /user/
+    
+    ```
+
+17. `-get` 从HDFS下载文件到本地, 等同于`-copyToLocal`
+
+    ```shell
+    hdfs dfs -get /user/zcz/test.xml ./
+    或
+    hadoop fs -get /user/zcz/test.xml ./
+    
+    ```
+
+18. `-getmerge` 合并下载多个文件到本地
+
+    ```shell
+    hdfs dfs -getmerge /user/zcz/* ./
+    或
+    hdfs dfs -getmerge /user/zcz/zcz.xml /user/zcz/test.xml zzz.xml
+    或
+    hadoop fs -getmerge /user/zcz/* ./
+    或
+    hadoop fs -getmerge /user/zcz/zcz.xml /user/zcz/test.xml zzz.xml
+    
+    ```
+
+19. `-put` 本地文件上传到 hdfs, 等同于`-copyFromLocal`
+
+    ```shell
+    hdfs dfs -put zcz.xml /user/zcz/
+    或
+    hadoop fs -put zcz.xml /user/zcz/
+    
+    ```
+
+20. `-tail`：显示一个文件的末尾, 只有一个参数 -f 或者不加参数
+
+    ```shell
+    hdfs dfs -tail /user/zcz/abc.txt
+    或
+    hadoop fs -tail /user/zcz/abc.txt
+    
+    ```
+
+21. `-rm`：删除文件或文件夹
+
+    ```shell
+    hdfs dfs -rm -rf /user/zcz
+    或
+    hadoop fs -rm -rf /user/zcz/abc.txt
+    
+    ```
+
+22. `-rmdir`: 删除空目录
+
+    ```shell
+    hdfs dfs -rmdir /user
+    或
+    hadoop fs -rmdir /user
+    
+    ```
+
+23. `-du` 统计文件大小
+
+    ```shell
+    hdfs dfs -du -h /abc.txt
+    或
+    hadoop fs -du -h /abc.txt
+    
+    ```
+
+24. `-find` 文件查找
+
+    ```shell
+    hdfs dfs -find /user/ -name zcz.*
+    或
+    hadoop fs -find /user/ -name zcz.*
+    
+    ```
+
+25. `-setrep` 设置 hdfs 中文件的副本数
+
+    ```shell
+    hdfs dfs -setrep 2 /abc.txt
+    或
+    hadoop fs -setrep 2 /abc.txt
+    
+    ```
+
+26. `-getfacl` 查看文件或文件夹的访问控制列表(读写执行, 用户用户组等权限)
+
+    ```shell
+    hdfs dfs -getfacl /user
+    或
+    hadoop fs -getfacl 2 /user
+    
+    ```
+
+27. `-stat` 指定格式显示文件信息
+
+28. `-test` 检查文件或文件夹 信息(是否是文件或文件夹, 扩展名, 长度, 是否存在等)
+
+29. `-touchz`: 创建空文件
+
+30. `-truncate` 阶段指定文件 执行长度
+
+### 理解架构后的命令
+
+[createSnapshot](https://hadoop.apache.org/docs/r2.9.2/hadoop-project-dist/hadoop-common/FileSystemShell.html#createSnapshot)
+
+[deleteSnapshot](https://hadoop.apache.org/docs/r2.9.2/hadoop-project-dist/hadoop-common/FileSystemShell.html#deleteSnapshot)
+
+[renameSnapshot](https://hadoop.apache.org/docs/r2.9.2/hadoop-project-dist/hadoop-common/FileSystemShell.html#renameSnapshot)
+
+[expunge](https://hadoop.apache.org/docs/r2.9.2/hadoop-project-dist/hadoop-common/FileSystemShell.html#expunge)
+
+官方文档 [FileSystem shell](https://hadoop.apache.org/docs/r2.9.2/hadoop-project-dist/hadoop-common/FileSystemShell.html#stat)
+
+[中文]([http://hadoop.apache.org/docs/r1.0.4/cn/hdfs_shell.html#lsr](http://hadoop.apache.org/docs/r1.0.4/cn/hdfs_shell.html#lsr))
+
+## hadoop hdfs 开发环境
+
+### 测试
+
+1. 创建项目添加 pom 依赖
+
+   ```xml
+    <dependencies>
+           <dependency>
+               <groupId>org.apache.hadoop</groupId>
+               <artifactId>hadoop-common</artifactId>
+               <version>2.9.2</version>
+           </dependency>
+           <dependency>
+               <groupId>org.apache.hadoop</groupId>
+               <artifactId>hadoop-hdfs</artifactId>
+               <version>2.9.2</version>
+           </dependency>
+           <dependency>
+               <groupId>org.apache.hadoop</groupId>
+               <artifactId>hadoop-hdfs-client</artifactId>
+               <version>2.9.2</version>
+           </dependency>
+       </dependencies>
+   ```
+
+2. 测试代码连接 hdfs 上传文件
+
+   ```java
+   public class HdfsClient {
+       public static void main(String[] args) throws IOException, URISyntaxException, InterruptedException {
+           ioStreamPutHdfs();
+       }
+   
+       /**
+        * @author zcz
+        * @description io 流方式文件上传
+        * @date 2020-03-28
+        *
+        * @return
+        */
+       public static void ioStreamPutHdfs() throws URISyntaxException, IOException, InterruptedException {
+           Configuration conf = new Configuration();
+           FileSystem fs = FileSystem.get(new URI("hdfs://172.16.235.162:8020"), conf, "hadoop");
+   
+           FileInputStream fileInputStream = new FileInputStream("/Users/zhangchenzhao/Desktop/local/zcz.xml");
+   
+           FSDataOutputStream fsDataOutputStream = fs.create(new Path("/user/zcz/io.xml"));
+   
+           IOUtils.copyBytes(fileInputStream, fsDataOutputStream, conf);
+   
+           fsDataOutputStream.close();
+           fileInputStream.close();
+           fs.close();
+   
+       }
+   }
+   ```
+
+### springboot hadoop
+
+1. pom依赖
+
+   ```xml
+      <dependencies>
+   <!--        spring boot-->
+           <dependency>
+               <groupId>org.springframework.boot</groupId>
+               <artifactId>spring-boot-test</artifactId>
+           </dependency>
+   
+           <dependency>
+               <groupId>org.springframework.boot</groupId>
+               <artifactId>spring-boot-starter-actuator</artifactId>
+           </dependency>
+           <dependency>
+               <groupId>org.springframework.boot</groupId>
+               <artifactId>spring-boot-starter-web</artifactId>
+           </dependency>
+   
+   <!--        hadoop-hdfs-->
+           <dependency>
+               <groupId>org.apache.hadoop</groupId>
+               <artifactId>hadoop-common</artifactId>
+               <version>2.9.2</version>
+           </dependency>
+           <dependency>
+               <groupId>org.apache.hadoop</groupId>
+               <artifactId>hadoop-hdfs</artifactId>
+               <version>2.9.2</version>
+           </dependency>
+           <dependency>
+               <groupId>org.apache.hadoop</groupId>
+               <artifactId>hadoop-hdfs-client</artifactId>
+               <version>2.9.2</version>
+           </dependency>
+   
+   
+       </dependencies>
+   ```
+
+2. 配置文件
+
+   ```properties
+   spring.application.name=hadoop-service
+   server.port=9100
+   
+   hdfs.user=hadoop
+   hdfs.defaultFS=hdfs://172.16.235.162:8020
+   ```
+
+3. 配置类
+
+   ```java
+   @Configuration
+   public class HadoopConf {
+   
+   
+       @Value("${hdfs.defaultFS}")
+       private String defautFS;
+   
+       @Value("${hdfs.user}")
+       private String user;
+   
+       @Bean
+       public org.apache.hadoop.conf.Configuration configuration(){
+           return new org.apache.hadoop.conf.Configuration();
+       }
+   
+       @Bean
+       public FileSystem fileSystem(org.apache.hadoop.conf.Configuration configuration) throws URISyntaxException, IOException, InterruptedException {
+           FileSystem fs = FileSystem.get(new URI(defautFS), configuration, user);
+           return fs;
+       }
+   }
+   ```
+
+4. log4j.properties
+
+   ```xml
+   log4j.rootLogger=INFO, stdout
+   log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+   log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+   log4j.appender.stdout.layout.ConversionPattern=%d %p [%c] - %m%n
+   log4j.appender.logfile=org.apache.log4j.FileAppender
+   log4j.appender.logfile.File=target/spring.log
+   log4j.appender.logfile.layout=org.apache.log4j.PatternLayout
+   log4j.appender.logfile.layout.ConversionPattern=%d %p [%c] - %m%n
+   ```
+
+5. hadoop配置文件的 hdfs-site.xml,core-site.xml, mapred-site.xml, yarn-site.xml 可以放在 resource 下, 优先级高于 hadoop 集群配置
+
+   ```
+   <?xml version="1.0" encoding="UTF-8"?>
+   <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+   
+   <configuration>
+       <!--文件备份数 默认3-->
+       <property>
+           <name>dfs.replication</name>
+           <value>1</value>
+       </property>
+   </configuration>
+   ```
+
+6. 测试
+
+   ```java
+   @RestController
+   @RequestMapping("/hdfs")
+   public class HdfsController {
+   
+   
+       @Autowired
+       private FileSystem fileSystem;
+       @Autowired
+       private Configuration configuration;
+   
+       @PutMapping("/upload")
+       public void get(@RequestParam("filePath") String filePath) throws IOException {
+           FileInputStream fileInputStream = new FileInputStream(filePath);
+           FSDataOutputStream fsDataOutputStream = fileSystem.create(new Path("/user/zcz/ion.xml"));
+   
+           IOUtils.copyBytes(fileInputStream, fsDataOutputStream, configuration);
+   
+           fsDataOutputStream.close();
+           fileInputStream.close();
+       }
+   
+   }
+   ```
+
+
+
+<img src="./hadoop/19.png" />
+
+上传文件副本数为 1 了, 表示开发环境副本数优先级高于 hadoop 集群配置
+
+## hdfs 操作原理
+
+### hdfs 文件上传过程
+
+1. 向 namenode 请求上传文件
+
+2. 响应可以上传文件
+
+3. 向 namenode 请求, 上传到哪几台 dataNode
+
+4. Namenode 返回,指定文件上传的 datanode 节点数据
+
+5. 通过获取到的 namenode 节点信息, 客户端向一个节点发送通信, 开通数据通信管道
+
+6. 确认建立通道
+
+7. 创建 FSDataOutputStream
+
+8. 客户端开始向 一个dataNode传递数据, 第一个 dataNode 将数据持久化到磁盘, 并通过内存, 向下一个 dataNode 传递副本, 直到传递最后一个指定 datanode
+
+9. 确认数据传输完成, 向前一个 namenode 或客户端返回确认
+
+10. 客户端将数据存储到那么datanode 节点的元数据信息传递给 namenode 存储
+
+    <img src="./hadoop/20.png" />
+
+### 网络拓扑
+
+<img src="./hadoop/21.png" />
+
+namenode 向客户端返回元数据下载位置, 是需要计算网络节点距离的, 根据请求客户端的位置计算最短距离:
+
+1. 计算同节点距离 例如: 集群a-机架 1-node1, distance = 0
+2. 计算同机架距离 例如: 集群a-机架 1-node1—> 集群a-机架 1-node2, 机架相同, 各节点向上查找 1 distance=2
+3. 计算同集群距离 例如: 集群a-机架 1-node1—>集群a-机架 2-node2, 集群相同, 各节点向上查找 1 到机架, 再向上查找 1 到集群 distance = 4
+4. 计算不同集群距离 例如: 集群a-机架 1-node1—>集群b-机架 2-node2,  各节点向上查找 1 到机架, 再向上查找 1到集群, 再向上查找 1  distance=6
+
+
+
+### 机架感知(副本存储节点选择)
+
+<img src="./hadoop/22.png" />
+
+选择存储副本的节点, 例如有三个副本
+
+1. 副本一:根据 client 所处的客户端, 找到相同节点, 存储一份副本
+2. 副本二:根据副本一所处节点, 找到相同机架任意节点, 存储一份副本
+3. 副本三:根据副本一所处节点, 找到不同机架任意节点, 存储一份副本
+
+
+
+### hdfs 文件读数据过程
+
+<img src="./hadoop/23.png" />
+
+1. 客户端向 namenode 请求下载数据
+2. namenode 返回目标文件的元数据
+3. 客户端创建 FSDataInputStream 向获取到的 dataNode 节点发起blk1数据请求
+4. dataNode 返回 blk1 数据
+5. 如果整个文件数据大于指定限制, 会有多个 block 块, 向存储了 blk2 的 namenode 发起数据请求
+6. namenode 返回数据
+7. 客户端将获取到的整个数据存储到指定位置
+
+## NameNode 与 Secondary NameNode元数据操作
+
+### 元数据生成与备份
+
+<img src="./hadoop/24.png" />
+
+1. 集群启动 nameNode 节点下会生成 edit 操作日志和 fsImage 元数据文件镜像 两类数据磁盘备份, 并加载到内存中
+2. 客户端向 nameNode 请求对数据操作(增删改)
+3. nameNode 想 edit 操作日志文件追加操作记录(增删改)
+4. 文件数据追加结束后, 将 nameNode 元数据进行修改
+5. secondary NameNode 会定期检查 nameNode 中的 fsImage 和 edit 操作日志是否由于长时间追加操作导致数据量过大, 效率降低, (默认 edit 操作日志到达 100 万条, 请求 checkPoint 操作)
+6. 开始请求 checkPoint, 对元数据备份进行整理
+7. nameNode 将 增加edit 操作日志, 后续操作追加到新的 edit 操作中, 防止数据整理, 不能对数据写的问题
+8. nameNode 将 edit 操作日志和 fsImage 文件发送到 secondary NameNode
+9. secondary NameNode 将 edit 操作日志和 fsImage 加载到内存合并
+10. secondary NameNode 将内存中的数据写入到 fsImage.checkPoint文件中
+11. secondary NameNode 将 fsImage.checkPoint 发送到 NameNode 中
+12. NameNode 将 fsImage.checkPoint 重命名 fsImage 替换原来的 fsImage 文件
+
+### 磁盘备份文件
+
+<img src="./hadoop/25.png" />
+
+1. nameNode 节点元数据磁盘备份位置
+
+2. edits_000000000000001-00000000000000009 操作记录, 每次的操作
+
+3. edits_inprogress_00000000000000000095 累计的操作记录
+
+   转成 xml 查看操作 edits_0000000000000000010-000000000000000055 记录了  55-10 次操作
+
+   ```shell
+   hdfs oev -p XML -i edits_0000000000000000010-000000000000000055 -o 55.xml
+   ```
+
+   <img src="./hadoop/26.png" />
+
+   第 11 次操作  创建一个新的文件夹   路径/user 空间 15853658…     用户 hadoop 用户组 supergroup
+
+4. fsImage_00000000000000094 元数据镜像
+
+   ```shell
+   hdfs oiv -p XML -i fsImage_00000000000000092 -o fs.xml
+   ```
+
+5. seen_txid 记录 操作次数 位置
+
+
+
+### checkPoint 检查配置
+
+```xml
+<!-- hdfs-default.xml -->
+<property>
+  <name>dfs.namenode.checkpoint.period</name>
+  <value>3600</value>
+  <description>设置 secondary NameNode 间隔时长 1h 执行 checkPoint 操作</description>
+</property>
+
+<property>
+  <name>dfs.namenode.checkpoint.txns</name>
+  <value>1000000</value>
+<description>操作动作次数</description>
+</property>
+
+<property>
+  <name>dfs.namenode.checkpoint.check.period</name>
+  <value>60</value>
+<description> 1分钟检查一次操作次数</description>
+</property >
+
+```
+
+
+
+### nameNode 故障处理
+
+当 nameNode 中的数据丢失或其它原因数据不全时, 可以通过 secondary NameNode 对 NameNode 数据恢复
+
+#### 直接拷贝
+
+1. 停止 nameNode 节点
+
+   ```shell
+   kill -9 nameNodeId
+   ```
+
+2. 删除 nameNode 中name 数据
+
+   ```shell
+   rm -rf /opt/modules/hadoop/data/tmp/dfs/name/*
+   ```
+
+3. 拷贝 secondary NameNode 数据到 nameNode 下
+
+   ```shell
+   scp -r hadoop@hadoop164:/opt/modules/hadoop/data/tmp/dfs/namesecondary/* /opt/modules/hadoop/data/tmp/dfs/name/
+   ```
+
+4. 启动 nameNode 节点
+
+   ```shell
+   hadoop-daemon.sh start namenode
+   ```
+
+5. 启动时,刷新网页页面提示**安全模式**
+
+#### importCheckPoint 恢复
+
+1. 修改hdfs-site.xml中的配置
+
+   ```xml
+   <!--减小检查时间-->
+   <property>
+     <name>dfs.namenode.checkpoint.period</name>
+     <value>120</value>
+   </property>
+   <!--指定 nameNode 的 name 数据目录-->
+   <property>
+     <name>dfs.namenode.name.dir</name>
+     <value>/opt/module/hadoop/data/tmp/dfs/name</value>
+   </property>
+   
+   ```
+
+2. 停止 nameNode 节点
+
+   ```
+   kill -9 nameNodeId
+   ```
+
+3. 删除 nameNode 中name 数据
+
+   ```shell
+   rm -rf /opt/modules/hadoop/data/tmp/dfs/name/*
+   ```
+
+4. secondNameNode 与 nameNode 不在同一节点时, 将 secondaryNameNode中的数据拷贝到 nameNode 下
+
+   ```shell
+   scp -r hadoop@hadoop164:/opt/module/hadoop/data/tmp/dfs/namesecondary /opt/module/hadoop/data/tmp/dfs/namesecondary
+   ```
+
+5. 删除 in_use.lock
+
+   ```shell
+   cd namesecondary/
+   rm -f in_use.lock
+   ```
+
+6. 导入检查点数据(过一会 ctrl+c)
+
+   ```shell
+   hdfs namenode -importCheckpoint
+   ```
+
+7. 启动 nameNode 节点
+
+   ```shell
+   hadoop-daemon.sh start namenode
+   ```
+
+8. 启动时,刷新网页页面提示**安全模式**
+
+
+
+### 安全模式
+
+1. NameNode 启动
+
+   NameNode 启动时, 首先将镜像文件(FsImage) 载入内存, 并执行编辑日志(Edits) 中的各项操作, 一旦在内存中成功建立文件系统元数据的映像, 则创建一个新的 FsImage 文件和一个空的编辑日志. 此时, NameNode 开始监听 DataNode 请求. **这个过程期间, NameNode 一直运行在安全模式,即 NameNode 的文件系统对客户端来说是只读的.**
+
+2. DataNode 启动
+
+   系统中的数据块的位置并不是由 NameNode 维护的, 而是以块列表的形式存储在 DataNode 中, 在系统的正常操作期间, NameNode 会在内存中保留所有块位置的映射信息. 在安全模式下, 各个 DataNode 会向 NameNode 发送最新的块列表信息, NameNode 了解到足够多的块位置信息后, 即可高效运行文件系统.
+
+3. 安全模式退出判断
+
+   如果满足"最小副本条件", NameNode 会在 30 秒后退出安全模式. 最小副本条件指的是在整个文件系统中 99.9%的块满足最小副本级别(默认值:dfs.replication.min=1). 在启动一个刚刚格式化的 HDFS 集群时, 因为系统中没有任何块, 所有不会进入安全模式
+
+4. 命令操作
+
+   ```shell
+   hdfs dfsadmin -safemode get		（功能描述：查看安全模式状态）
+   hdfs dfsadmin -safemode enter  	（功能描述：进入安全模式状态, 此时不允许操作数据）
+   hdfs dfsadmin -safemode leave	（功能描述：离开安全模式状态）
+   hdfs dfsadmin -safemode wait	（功能描述：等待安全模式状态, 等待安全模式退出后执行后续操作）
+   ```
 
 
 
