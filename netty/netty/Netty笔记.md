@@ -39,7 +39,7 @@ Reactor 可以分为三种: `单Reactor单线程`,  `单Reactor 多线程`, `主
 
 I/O复用结合线程池, 就是 Reactor 模式设计思想,
 
-* Reactor 模式, 通过一个或多个输入同事传递给服务处理器的模式(基于时间驱动)
+* Reactor 模式, 通过一个或多个输入同时传递给服务处理器的模式(基于时间驱动)
 * 服务器端程序处理传入的多个请求, 并将他们同步分派到响应的处理线程, 因此 Reactor 模式也叫 Dispatcher 模式
 * Reactor 模式使用 I/O复用监听事件, 收到时间后, 分发给某个线程(进程), 这点就是网络服务器高并发处理关键
 
@@ -84,8 +84,8 @@ I/O复用结合线程池, 就是 Reactor 模式设计思想,
 * Netty抽象出两个线程池: BossEventLoopGroup 专门负责接收客户端的连接; WorkerEventLoopGroup 专门负责网络的读写
 * BossEventLoopGroup和 WorkerEventLoopGroup类型都是 NioEventLoopGroup
 * NioEventLoopGroup 相当于一个事件的循环组, 这个组中含有多个事件循环, 每一个事件循环是 NioEventLoop
-* NioEventLoop 表示一个不断循环的执行处理人物的线程, 每个 NioEventLoop 都有一个 selector, 用于监听绑定在其上的 socket 网络通讯
-* NioEventLoop 可以有多个线程, 即可以含有多个 NioEventLoop
+* NioEventLoop 表示一个不断循环的执行处理任务的线程, 每个 NioEventLoop 都有一个 selector, 用于监听绑定在其上的 socket 网络通讯
+* NioEventLoopGroup 可以有多个线程, 即可以含有多个 NioEventLoop
 * 每个 BossNioEventLoop循环的步骤有三部
   * 轮训 accept 事件
   * 处理 accept 事件, 与 client 建立连接, 生成 NioSocketChannel, 并将其注册到某个 workerNioEventLoop 上的 selector

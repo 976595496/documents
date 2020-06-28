@@ -50,6 +50,84 @@ GC
 
 -XX:MaxTenuringThreshold  长期存活对象进入老年代:设置对象年龄进入老年代
 
+- -XX:MaxGCPauseMillis=<n>   最大停顿时间
+- -XX:GCTimeRatio=<n>   最大吞吐量
+
+
+
+-XX:+HeapDumpOnOutOfMemoryError
+
+-XX:HeapDumpPath=./
+
+
+
+
+
+
+
+### JVM
+
+堆
+
+-Xmx  -Xms
+
+-XX:NewSize 新生代内存    -XX:MaxNewSize   最大新生代内存
+
+-XX:NewRatio 新生代老年代比例    
+
+-XX:SurvivorRatio   Survivor区比例
+
+-XX:OldSize   老年代大小
+
+
+
+-XX:MinHeapFreeRatio     -XX:MaxHeapFreeRatio
+
+
+
+非堆(metaspace, 方法区)
+
+-XX:MetaspaceSize  -XX:MaxMetaspaceSize
+
+-XX:+UseCompressedClassPointers  使用压缩类空间
+
+-XX:CompressedClassSpaceSize 压缩类空间大小
+
+-XX:InitialCodeCacheSize  初始化 CodeCache 大小
+
+-XX:ReservedCodeCacheSize  CodeCache 最大大小
+
+
+
+GC
+
+-XX:CMSInitiatingOccupancyFraction=68 （默认是 68）
+
+-XX:+UseCMSInitiatingOccupancyOnly
+
+-XX:+UseCMSCompactAtFullCollection：允许在 Full GC 时，启用压缩式 GC
+
+-XX:CMSFullGCBeforeCompaction=n     在进行 n 次，CMS 后，进行一次压缩的 Full GC，用以减少 CMS 产生的碎片
+
+-XX:PreternureSizeThreshold 大对象直接分配到老年代: 
+
+-XX:MaxTenuringThreshold  长期存活对象进入老年代:设置对象年龄进入老年代
+
+- -XX:MaxGCPauseMillis=<n>   最大停顿时间
+- -XX:GCTimeRatio=<n>   最大吞吐量
+
+
+
+-XX:+HeapDumpOnOutOfMemoryError
+
+-XX:HeapDumpPath=./
+
+
+
+
+
+
+
 
 
 [jvm命令](https://docs.oracle.com/javase/8/docs/technotes/tools/unix/index.html)

@@ -6,11 +6,11 @@
 
 1. SqlSession: interface, 代表一个连接数据库的会话, 提供了一个默认的 DefaultSqlSession
 
-2. SqlSessionFactory: interfact, 创建 SqlSessionFactory 的工厂, 提供了默认的 DefaultSqlSessionFactory创建 DefaultSqlSession, (这里使用**工厂方法设计模式**)
+2. SqlSessionFactory: interface, 创建 SqlSession 的工厂, 提供了默认的 DefaultSqlSessionFactory创建 DefaultSqlSession, (这里使用**工厂方法设计模式**)
 
-3. SqlSessionFactoryBuilder: 构建SqlSessionFactory的构建类, 内部读取默认的 Configuration默认配置和读取xml 配置, (此处使用 **外观设计模式**, 将内部组合操作封装, 对外提供统一的操作)
+3. SqlSessionFactoryBuilder: 构建SqlSessionFactory的构建类, 内部读取默认的 Configuration默认配置和读取xml 配置, 
 
-4. sqlSessionManager: 实现了 sqlSession, sqlSessionFactory两个接口;  sqlSession 管理类, 从SqlSessionFactory的创建  到  factory 创建 sqlSession  到   sqlSession执行 SQL 都封装在内, 对外提供了操作方法
+4. sqlSessionManager: 实现了 sqlSession, sqlSessionFactory两个接口;  sqlSession 管理类, 从SqlSessionFactory的创建  到  factory 创建 sqlSession  到   sqlSession执行 SQL 都封装在内, 对外提供了操作方法(此处使用 **外观设计模式**, 将内部组合操作封装, 对外提供统一的操作)
 
    ```java
    public class SqlSessionManager implements SqlSessionFactory, SqlSession {

@@ -1581,7 +1581,521 @@ namenode 向客户端返回元数据下载位置, 是需要计算网络节点距
 
      
 
+## Hadoop MR 数据切片与输入格式化
 
+### 切片
+
+- MapReduce 执行中是以mapTask 为单位对数据进行处理, 
+
+- mapTask 的个数与操作数据段是由切片决定的
+
+- 切片是在单个文件的基础上通过一些机制设定的
+
+- 默认 MapReduce 使用 TextInputFormat 对数据进行读取分片, 切片大小默认为 block 大小
+
+- 切片过大会造成按个 mapTask 执行时间长,不能充分利用 hadoop 集群 dataNode 多节点的特性; 切片过小会造成 由于启动 mapTask 本身需要一定的时间, 而实际处理数据时间很短暂, 造成的大量启动 mapTask 造成性能低下
+
+- 大量小文件会对 MapReduce 造成性能影响
+
+  <img src="./hadoop/28.png" />
+
+  默认切片等于 block 大小, 当单个节点存储数据等于 block 时(源数据>=block, 分片存储在单个或多个节点), 一个节点会对一个文件生成一个 mapTask 执行数据操作,并且不会有数据传输的消耗
+
+  <img src="./hadoop/29.png" />
+
+  假设切片为 100M, 小于 block, 那么当单个节点存储数据等于 block 时(源数据>=block, 分片存储在单个或多个节点), mapTask 会在不同的dataNode 节点读取数据, 造成数据传输过程中的性能损耗
+
+  
+
+- 切片过程
+  1. 程序找到数据存储的目录
+  2. 开始遍历处理目录下的每个文件
+  3. 遍历到第一个文件 f.txt
+     1. 获取文件大小 fs.size(f.txt)
+     2. 计算切片大小 computeSplitSize(Math.max(minSize, Math.min(maxSize,blocksize)))=blocksize=128M
+     3. 默认切片大小=blocksize
+     4. 开始切片, 0-128M, 128-256M, 256-300M(**每次切片时,都要判断切完剩余部分是否大于block 的 1.1 倍, 不大于就划分为 1 块**)
+     5. 建切片信息记录到规划文件中(记录每个切片元数据:起止位置)
+  4. 提交切片规划文件到 YARN 上, YARN 上的 MrAppMaster根据规划文件计算 mapTask 调度资源执行
+
+### 输入格式
+
+MapReduce 的切片过程是在 FileInputFormat 中实现的, FileInputFormat官方提供了多个实现类* * 
+
+- TextInputFormat
+
+  TextInputFormat是默认的 InputFormat. 每条记录是一行输入, 建是 LongWritable 类型, 是当前数据读取起始字节偏移量,值是当前数据的一行数据(不包含结束行符:回车/换行)
+
+  ```
+  hello!\n
+  hello, zcz!\n
+  hello world!\n
+  ```
+
+  上面数据会被划分为3条记录
+
+  ```
+  key  value
+  0    hello!
+  6    hello, zcz!
+  17   hello world!
+  ```
+
+  Configuration可以通过设置`LineRecordReader.MAX_LINE_LENGTH`属性, 限制单行数据读取最大字节数, 若单行超过限制,表示数据异常, 不处理此行;
+
+  ```java
+  conf.set(LineRecordReader.MAX_LINE_LENGTH, 2147483647);
+  ```
+
+  
+
+  **注意: **文件是分块存储在不同节点的, 有可能一块数据的最后一行分在两个节点存储, 那么 mapTask 读取这一行时, 会存在跨节点读取数据, (虽然这种性能不会损耗很大, 但应注意, 一行数据非常大时, 可能传输数据就会很大消耗)
+
+- KeyValueTextInputFormat
+
+  按行读取数据, 读取的数据可以根据指定分隔符, 读取出一行数据由这个分隔符分割出的第一个字符串为 key, 此行剩余部分为 value, 可以通过`KeyValueLineRecordReader.KEY_VALUE_SEPERATOR`指定分隔符
+
+  ```
+  java		hello java!
+  scala		hello scala!
+  python	hello python!
+  ruby		hello ruby!
+  golang	hello golang!
+  php			hello php!
+  ```
+
+  ```java
+  conf.set(KeyValueLineRecordReader.KEY_VALUE_SEPERATOR, "\t");
+  ```
+
+  读取的内容为
+
+  ```
+  key			value
+  java		hello java!
+  scala		hello scala!
+  python	hello python!
+  ruby		hello ruby!
+  golang	hello golang!
+  php			hello php!
+  ```
+
+  
+
+- NLineInputFormat
+
+  按照指定行数读取数据, 读到的数据 key 是字节偏移量, value 是读取到的所有行数据
+
+  可以通过`NLineInputFormat.LINES_PER_MAP`设置读取的行数限制, 默认 1 行
+
+  ```java
+  conf.set(NLineInputFormat.LINES_PER_MAP, 1);
+  ```
+
+- SequenceFileInputFormat
+
+  读取 SequenceFile 类型数据, key 和 value 由 SequenceFile 内部数据决定,它是存储二进制数据的, 并且是可压缩的, 内部可以维护 key-value. 后面通过学习 SequenceFile 补充;
+
+  - SequenceFileAsTextInputFormat
+
+    将读取SequenceFile的 key-value 转为 Text 类型
+
+  - SequenceFileAsTextInputFormat
+
+    将读取SequenceFile的 key-value 转为 BytesWritable 类型
+
+- FixLengthInputFormat
+
+  用户从文件中读取固定宽度的二进制记录, 默认这些数据没有用分隔符分开,通过设置`FixLengthInputFormat.FIXED_RECORD_LENGTH`设置每个记录的大小
+
+- CombineTextInputFormat
+
+  大量小文件情况下, 会对每一个小文件划为一个切片,导致每个小文件一个 mapTask, 造成 MapReduce 性能及其低下, 通过 CombineTextInputFormat 可以将多个小文件划分到一个切片, 提高 MapReduce 单次处理的文件数据量, 减少 MapReduce 启动停止的开销
+
+  ```java
+  CombineTextInputFormat.setMaxInputSplitSize(job,102400000);// 100M
+  ```
+
+  ```
+  file1.txt   20M				20M					(20+50+60)M
+  file2.txt		50M				50M					
+  file2.txt		120M			60M
+  											60M					(60+70)M
+  file2.txt		70M				70M
+  file2.txt		70M				50M					(50+60)M
+  file2.txt		120M			60M
+  											60M					(60+80)M
+  file2.txt		80M				80M
+  ```
+
+  1. 输入源目录下有多个文件读取文件大小
+  2. 判断文件大小是否大于分片大小, 如果大于, 将文件划分为以filesize/(filesize/splitsize+(filesize%splitsize>0?1:0))大小相等的多个分片 例如 120>100     划分为两个 60
+  3. 将划分后的分片组合, 判断第一个分片是否大于 splitsize, 不大于, 直接+上后一个分片的大小,此时如果大于 splitsize, 则划分为一个分片, 下面再划分新的分片,
+  4. 上面最开始的 7 个文件最终划分为四个分片   130M    130M    110M     140M
+
+- MultipleInputs  多个输入, 为 MapReduce 操作多个 InputFormat 和 mapper
+
+- DBInputFormat 使用 jdbc 读取关系型数据库内的数据
+
+
+
+### 自定义输入格式
+
+1. 继承 FileInputFormat抽象类(读文本文件, ), 必须实现一个必须实现的createRecordReader方法, 创建RecordReader
+
+   也可以继承其它类实现不同的数据读取: CompositeInputFormat, DBInputFormat, ComposableInputFormat等
+
+2. 可以选择重写 FileInputFormat 其它方法, 包括是否分片, 和如何分片逻辑
+
+3. 自定义RecordReader, 内部为读取每一组 key- value 的逻辑
+
+```java
+/**
+ * <h3>study-all</h3>
+ *
+ * <p></p>
+ *
+ * @Author zcz
+ * @Date 2020-04-04 19:49
+ */
+public class CustomerInputFormat extends FileInputFormat {
+
+    @Override
+    public RecordReader createRecordReader(InputSplit inputSplit, TaskAttemptContext taskAttemptContext) throws IOException, InterruptedException {
+        CustomerRecordReader customerRecordReader = new CustomerRecordReader();
+        customerRecordReader.initialize(inputSplit, taskAttemptContext);
+        return customerRecordReader;
+    }
+}
+```
+
+```java
+/**
+ * <h3>study-all</h3>
+ *
+ * <p></p>
+ *
+ * @Author zcz
+ * @Date 2020-04-04 19:53
+ */
+public class CustomerRecordReader extends RecordReader {
+
+    //根据读取数据源类型 这里可以使用多种 split
+    //CombineFileSplit
+    //CompositeInputSplit
+    //DBInputSplit
+    //FileSplit
+    private FileSplit split;
+    private TaskAttemptContext context;
+    //key和 value 都是事先 writable 的可序列化的对象, 根据具体业务需求, 判定 mapper 输入的 key-value 类型
+    private Object key;
+    private Object value;
+
+    //初始化切片和上下文, 可以在这里对数据进行校验  初始化, 等逻辑
+    @Override
+    public void initialize(InputSplit inputSplit, TaskAttemptContext taskAttemptContext) throws IOException, InterruptedException {
+        this.split = (FileSplit)inputSplit;
+        this.context = taskAttemptContext;
+    }
+
+    @Override
+    public boolean nextKeyValue() throws IOException, InterruptedException {
+        //split 拿到的是当前整个分区数据, 根据具体业务, 读取分区数据内容,
+        //根据实际业务逻辑从 split 中读数据, 记录读出数据的位置,
+        //判定读取的数据还没有读取完, 返回 true 继续读
+        //判定读取的数据已经读完了, 返回 false
+
+        return false;
+    }
+
+    @Override
+    public Object getCurrentKey() throws IOException, InterruptedException {
+        //返回本次的 key 对应 mapper 输入的 key
+        return key;
+    }
+
+    @Override
+    public Object getCurrentValue() throws IOException, InterruptedException {
+        //返回本地的 value 对应 mapper 输入的 value
+        return value;
+    }
+
+    @Override
+    public float getProgress() throws IOException, InterruptedException {
+        //返回当前读取的进度
+        return 0;
+    }
+
+    @Override
+    public void close() throws IOException {
+
+    }
+}
+```
+
+## Hadoop MR Shuffle
+
+shuffle 的过程是在 MapTask 之后  reducerTask 之前的这么一段对数据处理传递的过程
+
+### 分区
+
+mapTask 执行数据操作后, 将输出数据存储到 环形缓冲区 中, 当环形缓冲区内数据量达到最大量(默认 100M)的 80%时, 将内部数据溢写到磁盘中存储,然后环形缓冲区再进行反向写入剩余数据; 写入磁盘时会对数据进行分区,默认分区为 0(不分区),分区数,会影响最终reduceTask 写入的文件数
+
+使用场景-希望将分析后的数据根据不同的属性, 写到多个文件中
+
+例如: 分析 2020 年疫情, 各省市区疫情情况, 将分析结果按照省份分别写入不同的文件
+
+- 自定义分区器
+
+  驱动类设置自定义分区器生效
+
+  ```java
+          job.setNumReduceTasks(3);//reduceTasks 数不能小于分区数
+          job.setPartitionerClass(CustomerPartitioner.class;
+  ```
+
+  实现自定义分区器
+
+  1. 继承Partitioner抽象类
+  2. 指定泛型 key- value 为 mapper 输出 key-value 类型
+  3. 实现方法 getPartition 内部是分区逻辑
+
+  ```java
+  /**
+   * <h3>study-all</h3>
+   *
+   * <p>自定义分区器实现</p>
+   *
+   * @Author zcz
+   * @Date 2020-04-05 11:29
+   */
+  public class CustomerPartitioner extends Partitioner<Comparable, Writable> {
+      @Override
+      public int getPartition(WritableComparable key, Writable value, int i) {
+  
+          job.setNumReduceTasks();
+          job.setPartitionerClass();
+          //key 是 mapper 的输出 key
+          //value 是 mapper 的输出 value
+          //根据具体需求完成分区,
+          //返回值是分区位置, 例如三个分区0,1,2   逻辑上应该是分区 0 的 return 0; 应该是分区 1 的 return 1; 应该是分区 2 的 return 2;
+          return 0;
+      }
+  }
+  ```
+
+  
+
+### 排序
+
+- 分类
+
+  部分排序: 各分区进行排序
+
+  全排序: 保证最后输出只有一个文件, 并且内部是有顺序的
+
+  辅助排序(分组排序):在 reduce 阶段, 对 key 进行一定规则的分组排序
+
+  二次排序: 排序方法 compareTo 中的判断条件为两个以上
+
+  MapTask和 reduceTask 都会对输入数据的 key 进行排序, 默认使用字典顺序排序, 算法使用快排
+
+  
+
+- MapReduce 过程中的排序
+
+  上面分区中描述到, mapTask将输出数据写入到 环形缓冲区 中, 当缓冲区中的数据达到阈值后, **会对缓冲区内的数据进行分区计算, 并进行分区内排序(默认字典顺序快排)**, 然后将缓冲区内经过分区计算的数据溢写到磁盘中存储,  在 mapper 阶段会有多个 MapTask执行, 所以会有多组分区, (可选操作)当所有 MapTask 执行完后, 将所有mapTask 的分区, 按各个分区规则进行归并排序
+
+  mapTask执行结束后, reduceTask 阶段会到 mapTask 下读取各组分区数据到reduceTask 内存中, 当读入的文件大小到达一定的阈值后, 会将文件溢写到磁盘中, 当磁盘中的文件达到一定数量, 会对数据进行按分区归并排序, 当所有数据拷贝完后,reduceTask 会将内存中和磁盘中的数据进行按分区归并排序
+
+- 自定义排序
+
+  首先说在排序中都是对输入或输出的 key 进行排序的, 所有 key 都需要是可排序的, 实现 WritableComparable接口, 实现 compareTo 方法, 就可以排序了
+
+  ```java
+  /**
+   * <h3>study-all</h3>
+   * <p>自定义可排序类</p>
+   *
+   * @Author zcz
+   * @Date 2020-04-05 18:51
+   */
+  public class CustomerCompareBean implements WritableComparable<CustomerCompareBean> {
+      private Integer column1;
+      private Integer column2;
+  
+      public CustomerCompareBean(Integer column1, Integer column2) {
+          this.column1 = column1;
+          this.column2 = column2;
+      }
+  
+      public CustomerCompareBean() {
+      }
+  
+      public Integer getColumn1() {
+          return column1;
+      }
+  
+      public void setColumn1(Integer column1) {
+          this.column1 = column1;
+      }
+  
+      public Integer getColumn2() {
+          return column2;
+      }
+  
+      public void setColumn2(Integer column2) {
+          this.column2 = column2;
+      }
+  
+      @Override
+      public void write(DataOutput out) throws IOException {
+          out.writeInt(column1);
+          out.writeInt(column2);
+      }
+  
+      @Override
+      public void readFields(DataInput in) throws IOException {
+          this.column1 = in.readInt();
+          this.column2 = in.readInt();
+      }
+      
+  
+  		/**
+       * 实现比较方法可进行排序
+       * */
+      @Override
+      public int compareTo(CustomerCompareBean o) {
+          
+          return (this.column1 != o.getColumn1())?
+                  (this.column1 - o.getColumn1()):
+                  (this.column2 - o.getColumn2());
+      }
+  }
+  ```
+
+  
+
+- 全排序: 只需要 mapper 输出 key 和 reducer 读取 key 可排序
+
+- 分区排序: 在全排序的基础上, 增加分区设置后可分区排序(自定义分区见分区章节)
+
+- 分组排序
+
+  - 自定义分组排序类CustomerGroupingComparator继承 WritableComparator, 
+
+  - 重写compare 方法
+
+    ```java
+    @Override
+    public int compare(WritableComparable a, WritableComparable b) {
+    		// 比较的业务逻辑
+    		return result;
+    }
+    ```
+
+  - 重写无参构造方法, 调用 super(OrderBean.class, , true)
+
+    ```java
+    protected OrderGroupingComparator() {
+    		super(OrderBean.class, true);
+    }
+    ```
+
+    例:
+
+  ```java
+  public class CustomerGroupingComparator extends WritableComparator {
+  	//重写无参构造
+  	protected OrderGroupingComparator() {
+  		super(OrderBean.class, true);
+  	}
+  
+  	@Override
+  	public int compare(WritableComparable a, WritableComparable b) {
+  
+  		//a与b的比较逻辑
+  
+  		return result;
+  	}
+  }
+  ```
+
+  Driver 设置分组排序
+
+  ```java
+  job.setGroupingComparatorClass(OrderGroupingComparator.class);
+  ```
+
+  
+
+### Combiner 合并
+
+- Combiner 不是必须的
+
+- Combiner 本质就是 reducer的子类
+
+- Combiner 和 reducer 的区别是执行位置:
+
+  Combiner 在每个 MapTask 后面执行
+
+  reducer 是在所有 MapTask 后面执行
+
+- Combiner 的意义是为每个 MapTask 的输出进行汇总, 减少reducerTask读取数据的网络传输量
+
+- 使用 Combiner 不能影响最终结果
+
+- Combiner 的key-value输入类型是Mapper的输出类型, Combiner 的输出类型是 Reducer 的输出类型
+
+自定义 Combiner
+
+```java
+/**
+ * <h3>study-all</h3>
+ *
+ * <p>自定义 Combiner</p>
+ *
+ * @Author zcz
+ * @Date 2020-04-05 19:27
+ */
+public class CustomerCombiner extends Reducer<Text, IntWritable, Text, IntWritable> {
+    private IntWritable value = new IntWritable();
+
+    @Override
+    protected void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
+        int sum = 0;
+        for (IntWritable i : values) {
+            sum = sum+ i.get();
+        }
+        value.set(sum);
+        context.write(key, value);
+
+    }
+}
+```
+
+Driver 中设置启动 Combiner
+
+```java
+conf.setConbinerClass(CustomerCombiner.class);
+```
+
+
+
+### Shuffle 过程总结
+
+1. MapTask 对数据进行读取, 并操作数据对数据进行整理后, 将整理后的数据调用 Partitioner 进行数据分区, 将分区后的数据写入环形缓冲区环形缓冲区内对数据分区排序, 并对区内部数据进行以 key 值排序(快排)
+2. 当数据缓冲区内数据达到阈值(100M*80%), 如果设置了 Combiner, 先对分区数据执行 Combiner 合并, 然后将各分区合并后的数据溢写到磁盘(分区数据, 区内有序)
+3. 如果有需要可以对写入到磁盘的分区数据进行 Combiner 操作, 并执行归并排序后再写入磁盘
+4. 将分区数据的元信息写到内存索引数据结构SpillRecord中，其中每个分区的元信息包括在临时文件中的偏移量、压缩前数据大小和压缩后数据大小。如果当前内存索引大小超过1MB，则将内存索引写到文件output/spillN.out.index中
+5. 如果设置了 Combiner , mapTask对所有数据进行一次 Combiner 合并, 保证每个 mapTask 只生成一个文件
+6. mapTask 全部结束后开始启动执行 reducerTask
+7. reducerTask将 mapTask生成的数据拷贝到 reducerTask 执行节点内存中,如果拷贝数据超过阈值, 将数据写到磁盘中
+8. reducerTask 将内存中和磁盘中的数据进行一次合并, 防止内存中数据过多, 和防止磁盘中文件过多
+9. reducerTask 将数据进行一次全局排序(归并)
+10. shuffle 过程结束, reducer 将处理数据写到 HDFS
+
+<img src="./hadoop/30.png" />
 
 ## Hive 安装配置教程
 

@@ -2,6 +2,24 @@
 
 # mysql 进阶笔记
 
+https://www.cnblogs.com/liuyansheng/p/6531915.html
+
+join_buffer_size
+
+Read_buffer_size
+
+Sort_buffer_size
+
+tmp_table_size
+
+query_cache_size
+
+innodb_buffer_pool_size
+
+key_buffer_size
+
+
+
 ## mysql 架构
 
 ### 配置文件
@@ -279,7 +297,7 @@ Mysql 官方对索引的定义为: **索引是帮助 MySQL 高效获取数据的
 
     * B+Tree
 
-    <img src="./mysql/18.png" height="220" />
+    <img src="./mysql/19.png" height="220" />
 
     T度的B+树，对比B树满足以下条件：
 
@@ -548,7 +566,7 @@ select * from class left join book on class.card=book.card left join phone on ph
 
 保证 Join 语句中被驱动表上 Join 条件字段已经被索引;
 
-当无法保证被驱动表的 Join 条件字段被索引缺内存资源充足的前提下, 不要太吝惜 `JoinBuffer` 的设置
+当无法保证被驱动表的 Join 条件字段被索引 却内存资源充足的前提下, 不要太吝惜 `JoinBuffer` 的设置
 
 
 
