@@ -109,6 +109,7 @@ GRANT ALL PRIVILEGES ON *.* TO 'username'@'%' IDENTIFIED BY 'password' WITH GRAN
 
    ```shell
    # yum install -y libaio 
+   # yum -y install numactl
    ```
 
    
@@ -144,6 +145,7 @@ GRANT ALL PRIVILEGES ON *.* TO 'username'@'%' IDENTIFIED BY 'password' WITH GRAN
 6. 修改配置文件/
 
    ```shell
+   # cd mysql
    # vim /support-files/mysql.server
    ```
 
@@ -159,10 +161,11 @@ GRANT ALL PRIVILEGES ON *.* TO 'username'@'%' IDENTIFIED BY 'password' WITH GRAN
 
    
 
-7. 初始化mysql
+7. 初始化mysql 启动 mysql
 
    ```shell
    ./bin/mysqld --user=mysql --basedir=/usr/local/mysql --datadir=/usr/local/mysql/data --initialize
+   service mysqld start
    ```
 
    控制台会出现root 初始化密码
@@ -187,7 +190,7 @@ GRANT ALL PRIVILEGES ON *.* TO 'username'@'%' IDENTIFIED BY 'password' WITH GRAN
 10. 增加外网访问用户
 
     ```mysql
-    > grant all privileges on *.* to 'hive'@'%' identifyed by 'hive' with grant option;
+    > grant all privileges on *.* to 'userName'@'%' identifyed by 'password' with grant option;
     > flush privileges;
     ```
 

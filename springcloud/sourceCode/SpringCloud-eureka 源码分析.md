@@ -1,5 +1,11 @@
 # eureka 源码分析
 
+
+
+eureka.server.registry-sync-retries: 重试同步失败次数 默认5 次
+
+eureka.server.registry-sync-retry-wait-ms: 重试同步注册节点的时间默认 30s
+
 springCloud 是基于 springBoot 实现的一套微服务工具, 它组合了很多其他中间件、工具得以实现, 阅读 spring 源码找到阅读入口, 在`Resource/MATE-INF`下会有 `application.factories`文件, 这里标记了自动配置类, 然后查看整体源码目录结构, 已确定适合自己的阅读方式]
 
 <img src="./eureka/2.png" />

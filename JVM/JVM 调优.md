@@ -2,6 +2,18 @@
 
 [命令博客](https://mp.weixin.qq.com/s?__biz=MzAxODcyNjEzNQ==&mid=2247488758&idx=1&sn=22c85fc8d774a14ac73be99c82eb1d0a&chksm=9bd0b96eaca73078e0f1da9979d3c90facf734c0279c69478aeab737eea43b287242cdf1b544&mpshare=1&scene=23&srcid=&sharer_sharetime=1572830028774&sharer_shareid=fe443da7e2b002d46d24a5e4deda39f5#rd)
 
+
+
+## GC 选择
+
+如果想要最小化地使用内存和并行开销, 使用 serialGC
+
+如果想要最大化应用程序的吞吐量, 使用 parallel GC
+
+如果想要最小化 GC 的中断或停顿时间, 使用 CMS GC
+
+
+
 ## 常用参数
 
 堆
@@ -38,20 +50,94 @@
 
 GC
 
--XX:CMSInitiatingOccupancyFraction=68 （默认是 68）
+-XX:+PrintGCDetails  打印 GC 详细信息
 
--XX:+UseCMSInitiatingOccupancyOnly
+-XX:+PrintCommandLineFlags: 查看命令行相关参数(包含使用的垃圾收集器)
+
+CMS
+
+-XX:+UseConcMartSweepGC
+
+-XX:CMSInitiatingOccupancyFraction=68 （jdk6以前默认是 68, jdk6 之后 92） //内存占用率达到 68% 做 GC
+
+-XX:+UseCMSInitiatingOccupancyOnly 只是用设定的回收阈值(上面指定的70%),如果不指定,JVM仅在第一次使用设定值,后续则自动调整 与CMSInitiatingOccupancyFraction 结合使用
+
+-XX:ParallelCMSThreads  线程数量, (ParallelGCThreads+3)/4,  ParallelGCThreads parallelGC线程数量
 
 -XX:+UseCMSCompactAtFullCollection：允许在 Full GC 时，启用压缩式 GC
 
 -XX:CMSFullGCBeforeCompaction=n     在进行 n 次，CMS 后，进行一次压缩的 Full GC，用以减少 CMS 产生的碎片
 
+CMS弊端: 
+
+1. 产生内存碎片:  标记清除算法
+2. 收集器对 CPU 资源非常敏感:  虽然不会导致用户停顿, 但是会因为占用了一部分线程, 导致应用程序变慢, 总吞吐量降低
+3. CMS 收集器无法处理浮动垃圾:  初始标记—> 并发标记—>重新标记—>并发清理—>线程整理   在并发标记到重新标记之间会产生垃圾, 此时产生的垃圾不会被重新标记记录, 后续不会清理, 导致只能下次垃圾回收清理
+
+
+
+
+
 -XX:PreternureSizeThreshold 大对象直接分配到老年代: 
 
 -XX:MaxTenuringThreshold  长期存活对象进入老年代:设置对象年龄进入老年代
 
-- -XX:MaxGCPauseMillis=<n>   最大停顿时间
-- -XX:GCTimeRatio=<n>   最大吞吐量
+- -XX:MaxGCPauseMillis=<n>   最大停顿时间, STW时间, 毫秒, 
+- -XX:GCTimeRatio=<n>   最大吞吐量 取值(0, 100)    默认 99,   垃圾回收占 1%,   操作设置尽量不要超过 1%
+
+* -XX:+UseAdaptiveSizePolicy   设置 Parallel Scavenge 收集器具有自适应调节策略, 默认开启
+
+
+
+ParNew
+
+-XX:+ParNewGC
+
+
+
+Parallel Scavenge
+
+-XX:+UseParallelGC
+
+-XX:+UseParallelOldGC 
+
+-XX:ParallelGCThreads 限制线程数量, 默认开启和 CPU 相同核数线程
+
+
+
+G1 
+
+-XX:+UseStringDeduplication 开启 String 去重, 默认不开启, 需要手动开启
+
+-XX:+PrintStringDeduplicationStatistics   打印详细的去重统计信息
+
+-XX:StringDeduplicationAgeThreshold= 达到这个年龄的 String 对象被认定为去重的候选对象
+
+-XX:G1HeapRegionSize 使劲儿中,饿哦个 Region的大小, 值是 2 的幂, 范围是 1MB 到 32MB 之间,  目标是根据最小的 java 堆大小划分出的 2048 个区域, 默认是堆内存的 1/2000
+
+-XX:MaxGCPauseMillis  设置期望达到的最大 GC 停顿时间, 默认 200ms, JVM 会尽力实现, 但不保证
+
+-XX:ParallelGCThread 设置 STW 工作线程输的值, 最多设置为 8
+
+-XX:ConcGCThreads 设置并发标记的线程数
+
+-XX:InitialingHeapOccupancyPercent 设置触发并发 GC 周期的 java 堆占用率阈值, 超过此值 触发 GC 默认 45
+
+
+
+并行与并发
+
+分代收集
+
+空间整合
+
+可预测的停顿时间模型
+
+
+
+常量池:
+
+-XX:+PrintstringTablesStatistics  打印字符串常量池的统计信息
 
 
 

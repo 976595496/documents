@@ -4,17 +4,40 @@
 
 https://www.cnblogs.com/liuyansheng/p/6531915.html
 
-join_buffer_size
+join_buffer_size 默认 512k      8M
 
-Read_buffer_size
+read_buffer_size：
+
+```
+（数据文件存储顺序）是MySQL读入缓冲区的大小，将对表进行顺序扫描的请求将分配一个读入缓冲区，MySQL会为它分配一段内存缓冲区，read_buffer_size变量控制这一缓冲区的大小，如果对表的顺序扫描非常频繁，并你认为频繁扫描进行的太慢，可以通过增加该变量值以及内存缓冲区大小提高其性能，read_buffer_size变量控制这一提高表的顺序扫描的效率 数据文件顺序。 
+```
+
+read_rnd_buffer_size：
+
+```
+是MySQL的随机读缓冲区大小，当按任意顺序读取行时（列如按照排序顺序）将分配一个随机读取缓冲区，进行排序查询时，MySQL会首先扫描一遍该缓冲，以避免磁盘搜索，提高查询速度，如果需要大量数据可适当的调整该值，但MySQL会为每个客户连接分配该缓冲区所以尽量适当设置该值，以免内存开销过大。表的随机的顺序缓冲 提高读取的效率。
+```
 
 Sort_buffer_size
+
+```
+connect级别的参数, 默认大小是 8M 一般够用了, 不要调的特别大, 可能由于高并发耗尽内存,
+可以影响 order by   group by 的执行效果
+```
 
 tmp_table_size
 
 query_cache_size
 
-innodb_buffer_pool_size
+innodb_buffer_pool_size     db服务器总内存的60% 到80%
+
+innodb_additional_mem_pool_size  128M
+
+innodb_sort_buffer_size:
+
+```
+在创建InnoDB索引时用于指定对数据排序的排序缓冲区的大小。利用这块内存把数据读进来进行内部排序然后写入磁盘。这个参数只会在创建索引的过程中被使用，不会用在后面的维护操作；在索引创建完毕后innodb_sort_buffer会被释放。
+```
 
 key_buffer_size
 
@@ -273,7 +296,7 @@ Mysql 官方对索引的定义为: **索引是帮助 MySQL 高效获取数据的
 
 * BTree 索引
 
-  * **索引原理 : **真实的情况是, 3 层的 B+ 树可以表示上百万的数据, 如果上百万的数据查找只需要三次I/O, 性能提升讲师巨大的, 如果没有索引, 每个数据项都要发生一次 I/O, 那么总共需要百万次的I/O, 显然成本非常非常高.
+  * **索引原理 : **真实的情况是, 3 层的 B+ 树可以表示上百万的数据, 如果上百万的数据查找只需要三次I/O, 性能提升将是巨大的, 如果没有索引, 每个数据项都要发生一次 I/O, 那么总共需要百万次的I/O, 显然成本非常非常高.
 
   * 实际使用的是 B+Tree
 
