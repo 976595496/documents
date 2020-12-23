@@ -210,3 +210,70 @@ GRANT ALL PRIVILEGES ON *.* TO 'username'@'%' IDENTIFIED BY 'password' WITH GRAN
 ![](mysql/5.png)
 
   
+
+## 配置主从复制
+
+### 新安装的主备库
+
+1. 在每台服务器上创建复制账号
+2. 配置主库和备库
+3. 通知备库连接到主库并从主库复制数据
+
+步骤如下:
+
+1. 创建用户并给予相应权限
+
+   主库和备库都创建
+
+   ```sql
+   GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO repl@* IDENTIFIED BY 'password';
+   ```
+
+2. 配置主库和备库
+
+   ```ini
+   #主
+   #开启bin-log日志
+   log_bin=mysql-bin
+   #为mysql设置一个服务id
+   server_id=10
+   ```
+
+   主库重启 执行 show master status 查看检查 bin-log 创建
+
+   ```ini
+   #备
+   #开启bin-log日志
+   log_bin=mysql-bin
+   #为mysql设置一个服务id
+   server_id=11
+   #启动备库的中继日志
+   relay_log=/var/lib/mysql/mysql-relay-bin 
+   #记录备库执行同步的更新操作
+   log_slave_updates=1
+   read_only=1
+   ```
+
+   
+
+3. 启动复制
+
+   ```sql
+   CHANGE MASTER TO MASTER_HOST='server1', MASTER_USER='repl', MASRER_PASSWORD='password', MASTER_LOG_FILE='mysql-bin.000001', MASTER_LOG_POS=0;
+   ```
+
+   MASTER_LOG_POS参数被设置为0, 因为要从日志的开头读起
+
+   ```sql
+    检查复制是否正在执行
+   show slave status;
+   ```
+
+   ```sql
+   开始复制
+   start slave;
+   ```
+
+   
+
+   
