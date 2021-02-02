@@ -1,0 +1,45 @@
+pipeline{
+    agent any
+    stages{
+        stage('获取代码'){
+            steps{
+                checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7f33e95f-3502-402c-87e7-9160ff33105c', url: 'git@172.16.235.137:test/test-project.git']]])
+            }
+        }
+        stage('代码质检'){
+            steps{
+                withSonarQubeEnv('sonarQube') { //这个sonarQube 与 jenkins 配置 sonarqube 服务端name 一致
+                    sh '/opt/modules/sonar-scanner/bin/sonar-scanner -Dsonar.projectName=${JOB_NAME} -Dsonar.projectKey=java -Dsonar.sources=. -Dsonar.java.binaries=.'        
+                }
+                script {
+                    timeout(3) { //超时时间  获取状态 提示代码检测异常 需要打开服务端 webhook
+                        def qg = waitForQualityGate()
+                        if (qg.status != 'OK') {
+                            error "未通过 Sonnarqube 的代码检查"
+                        }
+                    }
+                }
+            }
+        }
+        stage('代码构建'){
+            steps{
+                echo '执行代码构建脚本'
+
+            }
+        }
+        stage('代码部署'){
+            steps{
+                sh '执行代码部署脚本'
+            }
+        }
+    }
+    post{
+        failure{
+            emailext body: '失败', recipientProviders: [developers()], subject: '部署', to: 'youya_cz@163.com'
+        }
+        success{
+            emailext body: '成功', recipientProviders: [developers()], subject: '部署', to: 'youya_cz@163.com'
+        }
+        
+    }
+}

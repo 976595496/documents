@@ -181,9 +181,35 @@ vim /etc/docker/daemon.json
   docker attach #{containerId} 
   ```
 
-  
+* pull
 
-* 
+* push
+
+* export 将容器导出
+
+  ```shell
+  docker export mysql > mysql.tar #导出到本地的一个 tar 包
+  ```
+
+* import
+
+  ```shell
+  docker import mysql.tar #把通过容器导出的 tar 包导入到镜像
+  ```
+
+* save
+
+  ```shell
+  docker save mysql > mysql.tar  #将镜像导出 tar 包
+  ```
+
+* load
+
+  ```shell
+  docker load mysql.tar #将镜像导出的 tar 包 导入到 docker 镜像
+  ```
+
+  
 
 ### 容器数据卷
 
