@@ -780,44 +780,6 @@ NIO 缓冲区的实现, 需要现将 JVM 中的数据拷贝到机器内存中, �
 
 http://frankfan915.iteye.com/blog/2199600
 
-<<<<<<< HEAD
-## netty类说明
-
-### channelOption
-
-| 类型                                         | 选项                                                         | 描述                                                         | 使用位置               |
-| -------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ---------------------- |
-| `static ChannelOption<ByteBufAllocator>`     | `ALLOCATOR`                                                  | buffer使用的创建方式, 调优时可使用池化减少buffer的创建, 进而减少对象创建, 降低垃圾回收 | boss,  work            |
-| `static ChannelOption<Boolean>`              | `ALLOW_HALF_CLOSURE`                                         | 1. 关闭连接时, 允许半关, 默认不允许<br />2. TCP 是双向通道；<br />3. 半关之后，Server 还是可以向 Client 发数据，只是不能从 Client 再读数据，Client 也不能向 Server 发数据了；<br />4. Netty参数，一个连接的远端关闭时本地端是否关闭，默认值为False。值为False时，连接自动关闭；为True时，触发ChannelInboundHandler的userEventTriggered()方法，事件为ChannelInputShutdownEvent。 | work                   |
-| `static ChannelOption<Boolean>`              | `AUTO_CLOSE`                                                 | 1. 当写操作失败的时候就会自动关闭连接，默认是true<br />2. If `true` then the [`Channel`](https://netty.io/4.1/api/io/netty/channel/Channel.html) is closed automatically and immediately on write failure. | boss,  work            |
-| `static ChannelOption<Boolean>`              | `AUTO_READ`                                                  | Netty参数，自动读取，默认值为True。Netty只在必要的时候才设置关心相应的I/O事件。对于读操作，需要调用channel.read()设置关心的I/O事件为OP_READ，这样若有数据到达才能读取以供用户处理。该值为True时，每次读操作完毕后会自动调用channel.read()，从而有数据到达便能读取；否则，需要用户手动调用channel.read()。需要注意的是：当调用config.setAutoRead(boolean)方法时，如果状态由false变为true，将会调用channel.read()方法读取数据；由true变为false，将调用config.autoReadCleared()方法终止数据读取。 | boss,work 一般用于work |
-| `static ChannelOption<Integer>`              | `CONNECT_TIMEOUT_MILLIS`                                     | Netty参数，连接超时毫秒数，默认值30000毫秒即30秒。           |                        |
-| `static ChannelOption<Boolean>`              | `DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION $\textcolor{green}{Deprecated}$ |                                                              |                        |
-| `static ChannelOption<InetAddress>`          | `IP_MULTICAST_ADDR`                                          | 对应IP参数IP_MULTICAST_IF，设置对应地址的网卡为多播模式      |                        |
-| `static ChannelOption<NetworkInterface>`     | `IP_MULTICAST_IF`                                            | 对应IP参数IP_MULTICAST_IF2，同上但支持IPV6。                 |                        |
-| `static ChannelOption<Boolean>`              | `IP_MULTICAST_LOOP_DISABLED`                                 | 对应IP参数IPMUTICAST_LOOP, 设置本地回环接口的多播功能, 由于IP_MUTICAST_LOOP返回true表示关闭, 所以netty加上后缀_DISABLED防止歧义 |                        |
-| `static ChannelOption<Integer>`              | `IP_MULTICAST_TTL`                                           | IP参数, 多播数据包的time-to-live 即存活跳数                  |                        |
-| `static ChannelOption<Integer>`              | `IP_TOS`                                                     | IP参数，设置IP头部的Type-of-Service字段，用于描述IP包的优先级和QoS选项  https://www.cnblogs.com/lsgxeva/p/12384641.html |                        |
-| `static ChannelOption<Integer>`              | `MAX_MESSAGES_PER_READ`.  $\textcolor{green}{Deprecated}$    | Use [`MaxMessagesRecvByteBufAllocator`](https://netty.io/4.1/api/io/netty/channel/MaxMessagesRecvByteBufAllocator.html) and [`MaxMessagesRecvByteBufAllocator.maxMessagesPerRead(int)`](https://netty.io/4.1/api/io/netty/channel/MaxMessagesRecvByteBufAllocator.html#maxMessagesPerRead-int-). |                        |
-| `static ChannelOption<MessageSizeEstimator>` | `MESSAGE_SIZE_ESTIMATOR`                                     | 消息大小估算器，默认为DefaultMessageSizeEstimator.DEFAULT。估算ByteBuf、ByteBufHolder和FileRegion的大小，其中ByteBuf和ByteBufHolder为实际大小，FileRegion估算值为0。该值估算的字节数在计算水位时使用，FileRegion为0可知FileRegion不影响高低水位。 |                        |
-| `static ChannelOption<RecvByteBufAllocator>` | `RCVBUF_ALLOCATOR`                                           | 用于Channel分配接受Buffer的分配器，默认值为AdaptiveRecvByteBufAllocator.DEFAULT，是一个自适应的接受缓冲区分配器，能根据接受到的数据自动调节大小。可选值为FixedRecvByteBufAllocator，固定大小的接受缓冲区分配器。 |                        |
-| `static ChannelOption<Boolean>`              | `SINGLE_EVENTEXECUTOR_PER_GROUP`                             | 单线程执行ChannelPipeline中的事件，默认值为True。该值控制执行ChannelPipeline中执行ChannelHandler的线程。如果为True，整个pipeline由一个线程执行，这样不需要进行线程切换以及线程同步，是Netty4的推荐做法；如果为False，ChannelHandler中的处理过程会由Group中的不同线程执行。 |                        |
-| `static ChannelOption<Integer>`              | `SO_BACKLOG`                                                 | 对应的是tcp/ip协议listen函数中的backlog参数，backlog参数指定了队列的大小  https://www.cnblogs.com/alter888/p/9412477.html |                        |
-| `static ChannelOption<Boolean>`              | `SO_BROADCAST`                                               | Socket参数，设置广播模式。                                   |                        |
-| `static ChannelOption<Boolean>`              | `SO_KEEPALIVE`                                               | 当设置为true的时候，TCP会实现监控连接是否有效，当连接处于空闲状态的时候，超过了2个小时，本地的TCP实现会发送一个数据包给远程的 socket，如果远程没有发回响应，TCP会持续尝试11分钟，知道响应为止，如果在12分钟的时候还没响应，TCP尝试关闭socket连接。 | work                   |
-| `static ChannelOption<Integer>`              | `SO_LINGER`                                                  | ChannelOption.SO_LINGER参数对应于套接字选项中的SO_LINGER，Linux内核默认的处理方式是当用户调用close（）方法的时候，函数返回，在可能的情况下，尽量发送数据，不一定保证会发送剩余的数据，造成了数据的不确定性，使用SO_LINGER可以阻塞close()的调用时间，直到数据完全发送。 | Work                   |
-| `static ChannelOption<Integer>`              | `SO_RCVBUF`                                                  | ChannelOption.SO_SNDBUF参数对应于套接字选项中的SO_SNDBUF，ChannelOption.SO_RCVBUF参数对应于套接字选项中的SO_RCVBUF这两个参数用于操作`接收缓冲区和发送缓冲区的大小`，接收缓冲区用于保存网络协议站内收到的数据，直到应用程序读取成功，发送缓冲区用于保存发送数据，直到发送成功。 |                        |
-| `static ChannelOption<Boolean>`              | `SO_REUSEADDR`                                               | ChanneOption.SO_REUSEADDR对应于套接字选项中的SO_REUSEADDR，这个参数表示允许重复使用本地地址和端口。$\textcolor{green}{不管用}$ |                        |
-| `static ChannelOption<Integer>`              | `SO_SNDBUF`                                                  | 比如，某个服务器进程占用了TCP的80端口进行监听，此时再次监听该端口就会返回错误，使用该参数就可以解决问题，该参数允许共用该端口，这个在服务器程序中比较常使用。ChannelOption.SO_SNDBUF参数对应于套接字选项中的SO_SNDBUF，ChannelOption.SO_RCVBUF参数对应于套接字选项中的SO_RCVBUF这两个参数用于操作`接收缓冲区和发送缓冲区的大小`，接收缓冲区用于保存网络协议站内收到的数据，直到应用程序读取成功，发送缓冲区用于保存发送数据，直到发送成功。 |                        |
-| `static ChannelOption<Integer>`              | `SO_TIMEOUT`                                                 | 比如某个进程非正常退出，该程序占用的端口可能要被占用一段时间才能允许其他进程使用，而且程序死掉以后，内核一需要一定的时间才能够释放此端口，不设置SO_REUSEADDR就无法正常使用该端口。 |                        |
-| `static ChannelOption<Boolean>`              | `TCP_NODELAY` $\textcolor{red}{重要}$                        | ChannelOption.TCP_NODELAY参数对应于套接字选项中的TCP_NODELAY,该参数的使用与Nagle算法有关。 |                        |
-| `static ChannelOption<Integer>`              | `WRITE_BUFFER_HIGH_WATER_MARK`**Deprecated.**                | Nagle算法是将小的数据包组装为更大的帧然后进行发送，而不是输入一次发送一次，因此在数据包不足的时候会等待其他数据的到来，组装成大的数据包进行发送，虽然该算法有效提高了网络的有效负载，但是却造成了延时。Use [`WRITE_BUFFER_WATER_MARK`](https://netty.io/4.1/api/io/netty/channel/ChannelOption.html#WRITE_BUFFER_WATER_MARK) |                        |
-| `static ChannelOption<Integer>`              | `WRITE_BUFFER_LOW_WATER_MARK`**Deprecated.**                 | 而该参数的作用就是禁止使用Nagle算法，使用于小数据即时传输。和TCP_NODELAY相对应的是TCP_CORK，该选项是需要等到发送的数据量最大的时候，一次性发送数据，适用于文件传输。Use [`WRITE_BUFFER_WATER_MARK`](https://netty.io/4.1/api/io/netty/channel/ChannelOption.html#WRITE_BUFFER_WATER_MARK) |                        |
-| `static ChannelOption<WriteBufferWaterMark>` | `WRITE_BUFFER_WATER_MARK` $\textcolor{red}{调优}$            | 通过 WRITE_BUFFER_WATER_MARK 设置某个连接上可以暂存的最大最小 Buffer 之后，如果该连接的等待发送的数据量大于设置的值时，则 isWritable 会返回不可写。这样，客户端可以不再发送，防止这个量不断的积压，最终可能让客户端挂掉。如果发生这种情况，一般是服务端处理缓慢导致。这个值可以有效的保护客户端。此时数据并没有发送出去。 |                        |
-| `static ChannelOption<Integer>`              | `WRITE_SPIN_COUNT`                                           | Netty参数，一个Loop写操作执行的最大次数，默认值为16。也就是说，对于大数据量的写操作至多进行16次，如果16次仍没有全部写完数据，此时会提交一个新的写任务给EventLoop，任务将在下次调度继续执行。这样，其他的写请求才能被响应不会因为单个大数据量写请求而耽误。 |                        |
-
-
-
 https://www.jianshu.com/p/13f72e0395c8：一个性能调优的文档，还有一些linux上查看性能的指令可以学习参考
 
 https://www.jianshu.com/p/051d566e110d：大牛的性能调优总结，实战总结
@@ -879,6 +841,51 @@ http://www.infoq.com/cn/articles/netty-million-level-push-service-design-points
      它会交给 EventLoop 线程处理
 
    * 
+
+4. 
+
+
+
+
+
+
+
+## netty类说明
+
+### channelOption
+
+| 类型                                         | 选项                                                         | 描述                                                         | 使用位置               |
+| -------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ---------------------- |
+| `static ChannelOption<ByteBufAllocator>`     | `ALLOCATOR`                                                  | buffer使用的创建方式, 调优时可使用池化减少buffer的创建, 进而减少对象创建, 降低垃圾回收 | boss,  work            |
+| `static ChannelOption<Boolean>`              | `ALLOW_HALF_CLOSURE`                                         | 1. 关闭连接时, 允许半关, 默认不允许<br />2. TCP 是双向通道；<br />3. 半关之后，Server 还是可以向 Client 发数据，只是不能从 Client 再读数据，Client 也不能向 Server 发数据了；<br />4. Netty参数，一个连接的远端关闭时本地端是否关闭，默认值为False。值为False时，连接自动关闭；为True时，触发ChannelInboundHandler的userEventTriggered()方法，事件为ChannelInputShutdownEvent。 | work                   |
+| `static ChannelOption<Boolean>`              | `AUTO_CLOSE`                                                 | 1. 当写操作失败的时候就会自动关闭连接，默认是true<br />2. If `true` then the [`Channel`](https://netty.io/4.1/api/io/netty/channel/Channel.html) is closed automatically and immediately on write failure. | boss,  work            |
+| `static ChannelOption<Boolean>`              | `AUTO_READ`                                                  | Netty参数，自动读取，默认值为True。Netty只在必要的时候才设置关心相应的I/O事件。对于读操作，需要调用channel.read()设置关心的I/O事件为OP_READ，这样若有数据到达才能读取以供用户处理。该值为True时，每次读操作完毕后会自动调用channel.read()，从而有数据到达便能读取；否则，需要用户手动调用channel.read()。需要注意的是：当调用config.setAutoRead(boolean)方法时，如果状态由false变为true，将会调用channel.read()方法读取数据；由true变为false，将调用config.autoReadCleared()方法终止数据读取。 | boss,work 一般用于work |
+| `static ChannelOption<Integer>`              | `CONNECT_TIMEOUT_MILLIS`                                     | Netty参数，连接超时毫秒数，默认值30000毫秒即30秒。           |                        |
+| `static ChannelOption<Boolean>`              | `DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION $\textcolor{green}{Deprecated}$ |                                                              |                        |
+| `static ChannelOption<InetAddress>`          | `IP_MULTICAST_ADDR`                                          | 对应IP参数IP_MULTICAST_IF，设置对应地址的网卡为多播模式      |                        |
+| `static ChannelOption<NetworkInterface>`     | `IP_MULTICAST_IF`                                            | 对应IP参数IP_MULTICAST_IF2，同上但支持IPV6。                 |                        |
+| `static ChannelOption<Boolean>`              | `IP_MULTICAST_LOOP_DISABLED`                                 | 对应IP参数IPMUTICAST_LOOP, 设置本地回环接口的多播功能, 由于IP_MUTICAST_LOOP返回true表示关闭, 所以netty加上后缀_DISABLED防止歧义 |                        |
+| `static ChannelOption<Integer>`              | `IP_MULTICAST_TTL`                                           | IP参数, 多播数据包的time-to-live 即存活跳数                  |                        |
+| `static ChannelOption<Integer>`              | `IP_TOS`                                                     | IP参数，设置IP头部的Type-of-Service字段，用于描述IP包的优先级和QoS选项  https://www.cnblogs.com/lsgxeva/p/12384641.html |                        |
+| `static ChannelOption<Integer>`              | `MAX_MESSAGES_PER_READ`.  $\textcolor{green}{Deprecated}$    | Use [`MaxMessagesRecvByteBufAllocator`](https://netty.io/4.1/api/io/netty/channel/MaxMessagesRecvByteBufAllocator.html) and [`MaxMessagesRecvByteBufAllocator.maxMessagesPerRead(int)`](https://netty.io/4.1/api/io/netty/channel/MaxMessagesRecvByteBufAllocator.html#maxMessagesPerRead-int-). |                        |
+| `static ChannelOption<MessageSizeEstimator>` | `MESSAGE_SIZE_ESTIMATOR`                                     | 消息大小估算器，默认为DefaultMessageSizeEstimator.DEFAULT。估算ByteBuf、ByteBufHolder和FileRegion的大小，其中ByteBuf和ByteBufHolder为实际大小，FileRegion估算值为0。该值估算的字节数在计算水位时使用，FileRegion为0可知FileRegion不影响高低水位。 |                        |
+| `static ChannelOption<RecvByteBufAllocator>` | `RCVBUF_ALLOCATOR`                                           | 用于Channel分配接受Buffer的分配器，默认值为AdaptiveRecvByteBufAllocator.DEFAULT，是一个自适应的接受缓冲区分配器，能根据接受到的数据自动调节大小。可选值为FixedRecvByteBufAllocator，固定大小的接受缓冲区分配器。 |                        |
+| `static ChannelOption<Boolean>`              | `SINGLE_EVENTEXECUTOR_PER_GROUP`                             | 单线程执行ChannelPipeline中的事件，默认值为True。该值控制执行ChannelPipeline中执行ChannelHandler的线程。如果为True，整个pipeline由一个线程执行，这样不需要进行线程切换以及线程同步，是Netty4的推荐做法；如果为False，ChannelHandler中的处理过程会由Group中的不同线程执行。 |                        |
+| `static ChannelOption<Integer>`              | `SO_BACKLOG`                                                 | 对应的是tcp/ip协议listen函数中的backlog参数，backlog参数指定了队列的大小  https://www.cnblogs.com/alter888/p/9412477.html |                        |
+| `static ChannelOption<Boolean>`              | `SO_BROADCAST`                                               | Socket参数，设置广播模式。                                   |                        |
+| `static ChannelOption<Boolean>`              | `SO_KEEPALIVE`                                               | 当设置为true的时候，TCP会实现监控连接是否有效，当连接处于空闲状态的时候，超过了2个小时，本地的TCP实现会发送一个数据包给远程的 socket，如果远程没有发回响应，TCP会持续尝试11分钟，知道响应为止，如果在12分钟的时候还没响应，TCP尝试关闭socket连接。 | work                   |
+| `static ChannelOption<Integer>`              | `SO_LINGER`                                                  | ChannelOption.SO_LINGER参数对应于套接字选项中的SO_LINGER，Linux内核默认的处理方式是当用户调用close（）方法的时候，函数返回，在可能的情况下，尽量发送数据，不一定保证会发送剩余的数据，造成了数据的不确定性，使用SO_LINGER可以阻塞close()的调用时间，直到数据完全发送。 | Work                   |
+| `static ChannelOption<Integer>`              | `SO_RCVBUF`                                                  | ChannelOption.SO_SNDBUF参数对应于套接字选项中的SO_SNDBUF，ChannelOption.SO_RCVBUF参数对应于套接字选项中的SO_RCVBUF这两个参数用于操作`接收缓冲区和发送缓冲区的大小`，接收缓冲区用于保存网络协议站内收到的数据，直到应用程序读取成功，发送缓冲区用于保存发送数据，直到发送成功。 |                        |
+| `static ChannelOption<Boolean>`              | `SO_REUSEADDR`                                               | ChanneOption.SO_REUSEADDR对应于套接字选项中的SO_REUSEADDR，这个参数表示允许重复使用本地地址和端口。$\textcolor{green}{不管用}$ |                        |
+| `static ChannelOption<Integer>`              | `SO_SNDBUF`                                                  | 比如，某个服务器进程占用了TCP的80端口进行监听，此时再次监听该端口就会返回错误，使用该参数就可以解决问题，该参数允许共用该端口，这个在服务器程序中比较常使用。ChannelOption.SO_SNDBUF参数对应于套接字选项中的SO_SNDBUF，ChannelOption.SO_RCVBUF参数对应于套接字选项中的SO_RCVBUF这两个参数用于操作`接收缓冲区和发送缓冲区的大小`，接收缓冲区用于保存网络协议站内收到的数据，直到应用程序读取成功，发送缓冲区用于保存发送数据，直到发送成功。 |                        |
+| `static ChannelOption<Integer>`              | `SO_TIMEOUT`                                                 | 比如某个进程非正常退出，该程序占用的端口可能要被占用一段时间才能允许其他进程使用，而且程序死掉以后，内核一需要一定的时间才能够释放此端口，不设置SO_REUSEADDR就无法正常使用该端口。 |                        |
+| `static ChannelOption<Boolean>`              | `TCP_NODELAY` $\textcolor{red}{重要}$                        | ChannelOption.TCP_NODELAY参数对应于套接字选项中的TCP_NODELAY,该参数的使用与Nagle算法有关。 |                        |
+| `static ChannelOption<Integer>`              | `WRITE_BUFFER_HIGH_WATER_MARK`**Deprecated.**                | Nagle算法是将小的数据包组装为更大的帧然后进行发送，而不是输入一次发送一次，因此在数据包不足的时候会等待其他数据的到来，组装成大的数据包进行发送，虽然该算法有效提高了网络的有效负载，但是却造成了延时。Use [`WRITE_BUFFER_WATER_MARK`](https://netty.io/4.1/api/io/netty/channel/ChannelOption.html#WRITE_BUFFER_WATER_MARK) |                        |
+| `static ChannelOption<Integer>`              | `WRITE_BUFFER_LOW_WATER_MARK`**Deprecated.**                 | 而该参数的作用就是禁止使用Nagle算法，使用于小数据即时传输。和TCP_NODELAY相对应的是TCP_CORK，该选项是需要等到发送的数据量最大的时候，一次性发送数据，适用于文件传输。Use [`WRITE_BUFFER_WATER_MARK`](https://netty.io/4.1/api/io/netty/channel/ChannelOption.html#WRITE_BUFFER_WATER_MARK) |                        |
+| `static ChannelOption<WriteBufferWaterMark>` | `WRITE_BUFFER_WATER_MARK` $\textcolor{red}{调优}$            | 通过 WRITE_BUFFER_WATER_MARK 设置某个连接上可以暂存的最大最小 Buffer 之后，如果该连接的等待发送的数据量大于设置的值时，则 isWritable 会返回不可写。这样，客户端可以不再发送，防止这个量不断的积压，最终可能让客户端挂掉。如果发生这种情况，一般是服务端处理缓慢导致。这个值可以有效的保护客户端。此时数据并没有发送出去。 |                        |
+| `static ChannelOption<Integer>`              | `WRITE_SPIN_COUNT`                                           | Netty参数，一个Loop写操作执行的最大次数，默认值为16。也就是说，对于大数据量的写操作至多进行16次，如果16次仍没有全部写完数据，此时会提交一个新的写任务给EventLoop，任务将在下次调度继续执行。这样，其他的写请求才能被响应不会因为单个大数据量写请求而耽误。 |                        |
+
+
 
 4. 
 
