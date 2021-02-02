@@ -213,23 +213,36 @@ GRANT ALL PRIVILEGES ON *.* TO 'username'@'%' IDENTIFIED BY 'password' WITH GRAN
 
 ## 配置主从复制
 
-### 新安装的主备库
+### 主备库
 
-1. 在每台服务器上创建复制账号
-2. 配置主库和备库
-3. 通知备库连接到主库并从主库复制数据
+1. 如果主库有数据, 将主库数据同步到备库
+2. 在每台服务器上创建复制账号
+3. 配置主库和备库
+4. 通知备库连接到主库并从主库复制数据
 
 步骤如下:
 
-1. 创建用户并给予相应权限
+1. 如果主库有数据执行
+
+   ```shell
+   #主库服务器
+   mysqldump -uroot -p --all-databases > sqlfile.sql
+   ```
+
+   ```sql
+   -- 主库客户端
+   source /sqlfile.sql
+   ```
+
+2. 创建用户并给予相应权限
 
    主库和备库都创建
 
    ```sql
-   GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO repl@* IDENTIFIED BY 'password';
+   GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO repl@'%' IDENTIFIED BY 'zcz920518';
    ```
 
-2. 配置主库和备库
+3. 配置主库和备库
 
    ```ini
    #主
@@ -239,7 +252,7 @@ GRANT ALL PRIVILEGES ON *.* TO 'username'@'%' IDENTIFIED BY 'password' WITH GRAN
    server_id=10
    ```
 
-   主库重启 执行 show master status 查看检查 bin-log 创建
+   
 
    ```ini
    #备
@@ -248,18 +261,38 @@ GRANT ALL PRIVILEGES ON *.* TO 'username'@'%' IDENTIFIED BY 'password' WITH GRAN
    #为mysql设置一个服务id
    server_id=11
    #启动备库的中继日志
-   relay_log=/var/lib/mysql/mysql-relay-bin 
+   relay_log=/var/lib/mysql/log/mysql-relay-bin 
    #记录备库执行同步的更新操作
    log_slave_updates=1
    read_only=1
    ```
 
-   
+   ```shell
+   #修改relay-log目录用户组权限为mysql
+   chown -R mysql:mysql /var/lib/mysql/log/
+   ```
 
-3. 启动复制
+   重启主从库, 主库执行show master status 查看检查bin-log创建
 
    ```sql
-   CHANGE MASTER TO MASTER_HOST='server1', MASTER_USER='repl', MASRER_PASSWORD='password', MASTER_LOG_FILE='mysql-bin.000001', MASTER_LOG_POS=0;
+   mysql> show master status;
+   +------------------+----------+--------------+------------------+-------------------+
+   | File             | Position | Binlog_Do_DB | Binlog_Ignore_DB | Executed_Gtid_Set |
+   +------------------+----------+--------------+------------------+-------------------+
+   | mysql-bin.000003 |      154 |              |                  |                   |
+   +------------------+----------+--------------+------------------+-------------------+
+   ```
+
+   
+
+4. 启动复制
+
+   ```sql
+   CHANGE MASTER TO MASTER_HOST='server1', 
+   MASTER_USER='repl', 
+   MASTER_PASSWORD='zcz920518', 
+   MASTER_LOG_FILE='mysql-bin.000003', 
+   MASTER_LOG_POS=0;
    ```
 
    MASTER_LOG_POS参数被设置为0, 因为要从日志的开头读起
