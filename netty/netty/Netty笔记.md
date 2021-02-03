@@ -824,7 +824,7 @@ http://www.infoq.com/cn/articles/netty-million-level-push-service-design-points
      1. 普通的 Runnable: 通过调用 NioEventLoop 的 execute(Runnable task) 方法执行；
      2. 定时任务 ScheduledFutureTask: 通过调用 NioEventLoop 的 schedule(Runnable command, long delay, TimeUnit unit) 系列接口执行。
      ```
-    
+   
      过多使用 Runnable 和 ScheduledFutureTask执行异步操作, 可能会抢占 EventLoop资源造成阻塞, 所以尽量不要过多的使用 Runnable和ScheduledFutureTask, 可以使用NioEventLoop::setIoRatio(Integer)(默认 50)来设置IO 操作和用户自定义任务执行占比
 
    * 在 socket 业务中处理异步写出数据尽量不要直接使用 channel.writeAndFlush(data), 会产生线程切换, 使用
@@ -846,7 +846,7 @@ http://www.infoq.com/cn/articles/netty-million-level-push-service-design-points
 
 
 
-
+https://www.cnblogs.com/scy251147/p/10983814.html
 
 
 
@@ -861,7 +861,7 @@ http://www.infoq.com/cn/articles/netty-million-level-push-service-design-points
 | `static ChannelOption<Boolean>`              | `AUTO_CLOSE`                                                 | 1. 当写操作失败的时候就会自动关闭连接，默认是true<br />2. If `true` then the [`Channel`](https://netty.io/4.1/api/io/netty/channel/Channel.html) is closed automatically and immediately on write failure. | boss,  work            |
 | `static ChannelOption<Boolean>`              | `AUTO_READ`                                                  | Netty参数，自动读取，默认值为True。Netty只在必要的时候才设置关心相应的I/O事件。对于读操作，需要调用channel.read()设置关心的I/O事件为OP_READ，这样若有数据到达才能读取以供用户处理。该值为True时，每次读操作完毕后会自动调用channel.read()，从而有数据到达便能读取；否则，需要用户手动调用channel.read()。需要注意的是：当调用config.setAutoRead(boolean)方法时，如果状态由false变为true，将会调用channel.read()方法读取数据；由true变为false，将调用config.autoReadCleared()方法终止数据读取。 | boss,work 一般用于work |
 | `static ChannelOption<Integer>`              | `CONNECT_TIMEOUT_MILLIS`                                     | Netty参数，连接超时毫秒数，默认值30000毫秒即30秒。           |                        |
-| `static ChannelOption<Boolean>`              | `DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION $\textcolor{green}{Deprecated}$ |                                                              |                        |
+| `static ChannelOption<Boolean>`              | `DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION` $\textcolor{green}{Deprecated}$ |                                                              |                        |
 | `static ChannelOption<InetAddress>`          | `IP_MULTICAST_ADDR`                                          | 对应IP参数IP_MULTICAST_IF，设置对应地址的网卡为多播模式      |                        |
 | `static ChannelOption<NetworkInterface>`     | `IP_MULTICAST_IF`                                            | 对应IP参数IP_MULTICAST_IF2，同上但支持IPV6。                 |                        |
 | `static ChannelOption<Boolean>`              | `IP_MULTICAST_LOOP_DISABLED`                                 | 对应IP参数IPMUTICAST_LOOP, 设置本地回环接口的多播功能, 由于IP_MUTICAST_LOOP返回true表示关闭, 所以netty加上后缀_DISABLED防止歧义 |                        |
